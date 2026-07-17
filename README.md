@@ -180,6 +180,8 @@ export const getMailbox: GetMailbox = async ({ mailboxId, session }) => {
 - package and browser bundles are checked to ensure they contain no mailbox password.
 
 See [SECURITY.md](SECURITY.md) for reporting and production guidance.
+The owner checklist for repository access, branch rules and GitHub security is
+available in [docs/GITHUB_SETTINGS.md](docs/GITHUB_SETTINGS.md).
 
 ## Local development
 
