@@ -1,0 +1,10 @@
+export const DEFAULT_PAGE_SIZE = 30
+export const MAX_PAGE_SIZE = 100
+export const MAX_MESSAGE_SOURCE_BYTES = 10 * 1024 * 1024
+export const MAX_DOWNLOAD_BYTES = 4 * 1024 * 1024
+export const MAX_UPLOAD_FILE_BYTES = 3 * 1024 * 1024
+export const MAX_UPLOAD_TOTAL_BYTES = 3 * 1024 * 1024
+export const MAX_UPLOAD_FILES = 10
+export const MAX_RECIPIENTS = 25
+export const MAX_BODY_BYTES = 1024 * 1024
+export const MAX_SUBJECT_LENGTH = 500
