@@ -27,7 +27,11 @@ describe("route authorization", () => {
     })
     const response = await handler.GET(new Request("https://panel.example/api/admin/mail/folders?mailboxId=other"), { params: { mailinlay: ["folders"] } })
     expect(response.status).toBe(404)
-    expect(getMailbox).toHaveBeenCalledWith({ mailboxId: "other", session: { userId: "admin-a", projectId: "project-a" } })
+    expect(getMailbox).toHaveBeenCalledWith({
+      mailboxId: "other",
+      session: { userId: "admin-a", projectId: "project-a" },
+      request: expect.any(Request),
+    })
   })
 
   it("rejects cross-origin mutations before authentication", async () => {

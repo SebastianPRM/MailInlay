@@ -2,6 +2,17 @@
 
 All notable changes to MailInlay are recorded here.
 
+## [0.3.0] - 2026-07-20
+
+### Added
+
+- stateless relay mode for hosts that block outbound mail ports:
+  `createMailInlayProxy` (panel side) and `createMailInlayRelay` (relay side);
+- per-request AES-256-GCM encryption of the mailbox configuration with an
+  HKDF-derived bearer token for relay authentication;
+- `request` is now passed to `getMailbox` alongside `mailboxId` and `session`;
+- relay/proxy test suites, including an end-to-end forwarding test.
+
 ## [0.2.0] - 2026-07-20
 
 ### Added

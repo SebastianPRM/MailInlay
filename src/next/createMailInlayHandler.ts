@@ -27,7 +27,7 @@ export type MailInlayRouteContext = {
     | Promise<{ mailinlay?: string[] }>
 }
 
-type HandlerInput = {
+export type HandlerInput = {
   getSession: GetSession
   getMailbox: GetMailbox
   /**
@@ -47,7 +47,7 @@ function json(data: unknown, status = 200): Response {
   return Response.json(data, { status, headers: NO_STORE_HEADERS })
 }
 
-function validateSameOrigin(request: Request, allowedOrigins?: string[]) {
+export function validateSameOrigin(request: Request, allowedOrigins?: string[]) {
   const origin = request.headers.get("origin")
   if (!origin) throw errors.forbiddenOrigin()
   if (origin === new URL(request.url).origin) return
@@ -55,7 +55,7 @@ function validateSameOrigin(request: Request, allowedOrigins?: string[]) {
   throw errors.forbiddenOrigin()
 }
 
-async function routeParts(context: MailInlayRouteContext): Promise<string[]> {
+export async function routeParts(context: MailInlayRouteContext): Promise<string[]> {
   const params = await context.params
   return params.mailinlay ?? []
 }
@@ -70,11 +70,11 @@ type AuthorizedRequest = {
   mailboxId: string
 }
 
-async function authorize(request: Request, input: HandlerInput): Promise<AuthorizedRequest> {
+export async function authorize(request: Request, input: HandlerInput): Promise<AuthorizedRequest> {
   const session = await input.getSession(request)
   if (!session) throw errors.unauthorized()
   const mailboxId = queryMailboxId(request)
-  const mailbox = await input.getMailbox({ mailboxId, session })
+  const mailbox = await input.getMailbox({ mailboxId, session, request })
   if (!mailbox) throw errors.mailboxNotFound()
   return { mailbox, session, mailboxId }
 }
@@ -87,7 +87,7 @@ function attachmentDisposition(filename: string): string {
   return `attachment; filename="${safeFilename(filename)}"; filename*=UTF-8''${encodeURIComponent(filename.replace(/[\r\n]/g, ""))}`
 }
 
-function handleError(error: unknown): Response {
+export function handleError(error: unknown): Response {
   const normalized = error instanceof MailInlayError
     ? error
     : error instanceof z.ZodError

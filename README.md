@@ -51,7 +51,7 @@ Each request authenticates the current panel session, resolves a mailbox limited
 Pin applications to a release tag:
 
 ```bash
-npm install "git+https://github.com/SebastianPRM/MailInlay.git#v0.2.0"
+npm install "git+https://github.com/SebastianPRM/MailInlay.git#v0.3.0"
 ```
 
 The installed package exposes:
@@ -177,6 +177,65 @@ export const getMailbox: GetMailbox = async ({ mailboxId, session }) => {
   }
 }
 ```
+
+## Relay for hosts that block mail ports
+
+Some platforms (for example DigitalOcean) block outbound SMTP ports, and many
+mail providers offer no alternative port. For that case MailInlay ships a
+stateless relay: a separate deployment (typically on Vercel, which does not
+block IMAP/SMTP) that performs the mail-server connections, while sessions and
+mailbox credentials stay entirely in the host application.
+
+How it works: the panel keeps its normal `getSession` and `getMailbox`. Instead
+of connecting to the mail server itself, it forwards each request to the relay
+with the mailbox configuration encrypted per request (AES-256-GCM, shared
+secret). The relay authenticates the call with a derived bearer token, decrypts
+the configuration only in memory, performs the IMAP/SMTP operation and returns
+the response. It stores nothing and serves any number of panels that hold the
+same secret — or deploy one relay per organization with its own secret.
+
+In the host application, replace `createMailInlayHandler` with the proxy:
+
+```ts
+import { createMailInlayProxy } from "@mailinlay/sdk/next"
+import { getMailbox, getSession } from "@/lib/mailinlay"
+
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const maxDuration = 60
+
+export const { GET, POST, PATCH, DELETE } = createMailInlayProxy({
+  relayUrl: "https://my-relay.vercel.app/api/relay",
+  secret: process.env.MAILINLAY_RELAY_SECRET!,
+  getSession,
+  getMailbox,
+})
+```
+
+The relay is a fresh Next.js project with a single route,
+`app/api/relay/[...mailinlay]/route.ts`:
+
+```ts
+import { createMailInlayRelay } from "@mailinlay/sdk/next"
+
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const maxDuration = 60
+
+export const { GET, POST, PATCH, DELETE } = createMailInlayRelay({
+  secret: process.env.MAILINLAY_RELAY_SECRET!,
+})
+```
+
+Generate the shared secret with `openssl rand -base64 48` (minimum 32
+characters) and set the same value on both sides. Relay notes:
+
+- the relay stores no mailbox data; credentials exist only in request memory;
+- the encrypted configuration additionally protects against accidental header
+  logging on the relay platform;
+- the send rate limit applies on the relay per forwarded panel user;
+- the browser never talks to the relay — only the panel backend does;
+- keep the relay URL private and rotate the secret if it ever leaks.
 
 ## Security model
 

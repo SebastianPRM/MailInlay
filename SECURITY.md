@@ -6,7 +6,7 @@ Only the latest tagged release is supported with security fixes.
 
 | Version | Supported |
 | --- | --- |
-| 0.2.x | Yes |
+| 0.3.x | Yes |
 | Earlier versions | No |
 
 ## Reporting a vulnerability

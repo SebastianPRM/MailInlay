@@ -35,6 +35,7 @@ export type GetSession = (request: Request) => Promise<SessionContext | null>
 export type GetMailbox = (input: {
   mailboxId: string
   session: SessionContext
+  request: Request
 }) => Promise<MailboxConfig | null>
 
 export type EmailAddress = {
