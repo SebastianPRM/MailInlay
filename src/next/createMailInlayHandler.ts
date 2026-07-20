@@ -8,7 +8,7 @@ import {
   moveMessageSchema,
   updateMessageSchema,
 } from "../shared/schemas"
-import type { ErrorResponse, GetMailbox, GetSession, MailboxConfig } from "../shared/types"
+import type { ErrorResponse, GetMailbox, GetSession, MailboxConfig, SessionContext } from "../shared/types"
 import {
   deleteMessage,
   getAttachment,
@@ -19,6 +19,7 @@ import {
   updateMessage,
 } from "../server/imap"
 import { sendMessage } from "../server/smtp"
+import { consumeSendSlot } from "../server/rate-limit"
 
 export type MailInlayRouteContext = {
   params:
@@ -29,6 +30,12 @@ export type MailInlayRouteContext = {
 type HandlerInput = {
   getSession: GetSession
   getMailbox: GetMailbox
+  /**
+   * Additional origins accepted for mutating requests, e.g. when the panel is
+   * served behind a reverse proxy whose internal origin differs from the public
+   * one. Each entry must be a full origin such as "https://panel.example.com".
+   */
+  allowedOrigins?: string[]
 }
 
 const NO_STORE_HEADERS = {
@@ -40,9 +47,12 @@ function json(data: unknown, status = 200): Response {
   return Response.json(data, { status, headers: NO_STORE_HEADERS })
 }
 
-function validateSameOrigin(request: Request) {
+function validateSameOrigin(request: Request, allowedOrigins?: string[]) {
   const origin = request.headers.get("origin")
-  if (!origin || origin !== new URL(request.url).origin) throw errors.forbiddenOrigin()
+  if (!origin) throw errors.forbiddenOrigin()
+  if (origin === new URL(request.url).origin) return
+  if (allowedOrigins?.includes(origin)) return
+  throw errors.forbiddenOrigin()
 }
 
 async function routeParts(context: MailInlayRouteContext): Promise<string[]> {
@@ -54,13 +64,19 @@ function queryMailboxId(request: Request): string {
   return mailboxIdSchema.parse(new URL(request.url).searchParams.get("mailboxId") ?? "")
 }
 
-async function authorize(request: Request, input: HandlerInput): Promise<MailboxConfig> {
+type AuthorizedRequest = {
+  mailbox: MailboxConfig
+  session: SessionContext
+  mailboxId: string
+}
+
+async function authorize(request: Request, input: HandlerInput): Promise<AuthorizedRequest> {
   const session = await input.getSession(request)
   if (!session) throw errors.unauthorized()
   const mailboxId = queryMailboxId(request)
   const mailbox = await input.getMailbox({ mailboxId, session })
   if (!mailbox) throw errors.mailboxNotFound()
-  return mailbox
+  return { mailbox, session, mailboxId }
 }
 
 function safeFilename(value: string): string {
@@ -79,7 +95,7 @@ function handleError(error: unknown): Response {
       : errors.mailServer()
 
   if (!(error instanceof MailInlayError) && !(error instanceof z.ZodError)) {
-    console.error(`[MailInlay] ${normalized.code}`)
+    console.error(`[MailInlay] ${normalized.code}`, error)
   }
 
   const body: ErrorResponse = { error: { code: normalized.code, message: normalized.message } }
@@ -90,7 +106,7 @@ export function createMailInlayHandler(input: HandlerInput) {
   const GET = async (request: Request, context: MailInlayRouteContext): Promise<Response> => {
     try {
       const parts = await routeParts(context)
-      const mailbox = await authorize(request, input)
+      const { mailbox } = await authorize(request, input)
       const url = new URL(request.url)
 
       if (parts.length === 1 && parts[0] === "folders") {
@@ -104,6 +120,7 @@ export function createMailInlayHandler(input: HandlerInput) {
           page: url.searchParams.get("page") ?? 1,
           limit: url.searchParams.get("limit") ?? 30,
           query: url.searchParams.get("query") ?? "",
+          unseen: url.searchParams.get("unseen") ?? "",
         })
         return json(await getMessages(mailbox, parsed))
       }
@@ -137,11 +154,12 @@ export function createMailInlayHandler(input: HandlerInput) {
 
   const POST = async (request: Request, context: MailInlayRouteContext): Promise<Response> => {
     try {
-      validateSameOrigin(request)
+      validateSameOrigin(request, input.allowedOrigins)
       const parts = await routeParts(context)
-      const mailbox = await authorize(request, input)
+      const { mailbox, session, mailboxId } = await authorize(request, input)
 
       if (parts.length === 1 && parts[0] === "send") {
+        if (!consumeSendSlot(`${session.userId}:${mailboxId}`)) throw errors.tooManyRequests()
         return json(await sendMessage(mailbox, await request.formData()))
       }
 
@@ -158,9 +176,9 @@ export function createMailInlayHandler(input: HandlerInput) {
 
   const PATCH = async (request: Request, context: MailInlayRouteContext): Promise<Response> => {
     try {
-      validateSameOrigin(request)
+      validateSameOrigin(request, input.allowedOrigins)
       const parts = await routeParts(context)
-      const mailbox = await authorize(request, input)
+      const { mailbox } = await authorize(request, input)
       if (parts.length !== 2 || parts[0] !== "messages") {
         return json({ error: { code: "NOT_FOUND", message: "Endpoint nie istnieje." } }, 404)
       }
@@ -173,9 +191,9 @@ export function createMailInlayHandler(input: HandlerInput) {
 
   const DELETE = async (request: Request, context: MailInlayRouteContext): Promise<Response> => {
     try {
-      validateSameOrigin(request)
+      validateSameOrigin(request, input.allowedOrigins)
       const parts = await routeParts(context)
-      const mailbox = await authorize(request, input)
+      const { mailbox } = await authorize(request, input)
       if (parts.length !== 2 || parts[0] !== "messages") {
         return json({ error: { code: "NOT_FOUND", message: "Endpoint nie istnieje." } }, 404)
       }

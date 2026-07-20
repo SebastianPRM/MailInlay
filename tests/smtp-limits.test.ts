@@ -36,4 +36,16 @@ describe("SMTP input limits", () => {
     form.set("subject", "Temat\r\nBcc: attacker@example.com")
     await expect(sendMessage(mailbox, form)).rejects.toMatchObject({ code: "INVALID_REQUEST", status: 400 })
   })
+
+  it("rejects an oversized References entry before opening SMTP", async () => {
+    const form = baseForm()
+    form.set("references", JSON.stringify([`<${"a".repeat(1100)}@example.com>`]))
+    await expect(sendMessage(mailbox, form)).rejects.toMatchObject({ code: "INVALID_REQUEST", status: 400 })
+  })
+
+  it("rejects an oversized In-Reply-To header before opening SMTP", async () => {
+    const form = baseForm()
+    form.set("inReplyTo", `<${"a".repeat(1100)}@example.com>`)
+    await expect(sendMessage(mailbox, form)).rejects.toMatchObject({ code: "INVALID_REQUEST", status: 400 })
+  })
 })

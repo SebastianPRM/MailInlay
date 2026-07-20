@@ -25,13 +25,13 @@ MailInlay adds a project mailbox directly to an existing administration panel. T
 
 - one React component and one Next.js catch-all route;
 - no second login, user database, worker, queue or synchronization service;
-- IMAP folders, counters, pagination and server-side header search;
-- sanitized HTML, remote-image blocking and protected attachment downloads;
+- IMAP folders, counters, pagination, server-side header search and unread-only filter;
+- sanitized HTML, remote-image blocking, inline `cid:` images and protected attachment downloads;
 - seen/unseen, starred, move, Trash and permanent delete only from Trash;
 - compose, CC, BCC, attachments, signatures, Reply, Reply All and Forward;
 - SMTP delivery with an IMAP Sent copy and partial-success handling;
 - container-query responsive UI suitable for different admin layouts;
-- server-side TLS, strict limits, same-origin mutations and `no-store` responses.
+- server-side TLS, strict limits, send rate limiting, same-origin mutations and `no-store` responses.
 
 ## Architecture
 
@@ -94,11 +94,24 @@ import { getMailbox, getSession } from "@/lib/mailinlay"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
-export const maxDuration = 30
+export const maxDuration = 60
 
 export const { GET, POST, PATCH, DELETE } = createMailInlayHandler({
   getSession,
   getMailbox,
+})
+```
+
+Mutating requests must carry an `Origin` header that matches the request URL.
+If the panel runs behind a reverse proxy whose internal origin differs from the
+public one, either forward `X-Forwarded-Host`/`X-Forwarded-Proto` correctly or
+list the public origin explicitly:
+
+```ts
+export const { GET, POST, PATCH, DELETE } = createMailInlayHandler({
+  getSession,
+  getMailbox,
+  allowedOrigins: ["https://panel.example.com"],
 })
 ```
 
@@ -170,13 +183,18 @@ export const getMailbox: GetMailbox = async ({ mailboxId, session }) => {
 - `getSession` and project-scoped `getMailbox` run for every request;
 - mailbox secrets exist only in server memory and never use `NEXT_PUBLIC_*`;
 - TLS certificates are verified and all connections have short timeouts;
-- POST, PATCH and DELETE require an exact same-origin `Origin` header;
+- POST, PATCH and DELETE require an exact same-origin `Origin` header
+  (extra origins only via the explicit `allowedOrigins` option);
+- sending is rate limited per session (10 messages per minute, per instance);
 - sender identity is forced from the server-side mailbox configuration;
 - incoming and outgoing HTML use strict allowlists;
 - external images remain inactive until the user explicitly reveals them;
+- inline `cid:` images are served only through the protected attachment endpoint;
 - attachment and message sizes are limited before expensive processing;
+- `In-Reply-To` and `References` headers are length-limited and CRLF-checked;
 - permanent delete is rejected outside a recognized Trash folder;
 - mail and attachment responses use `Cache-Control: private, no-store`;
+- the bundled demo session is hard-disabled in production builds;
 - package and browser bundles are checked to ensure they contain no mailbox password.
 
 See [SECURITY.md](SECURITY.md) for reporting and production guidance.

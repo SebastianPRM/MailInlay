@@ -5,12 +5,16 @@ const commonAllowedTags = [
   "ul", "ol", "li", "a", "pre", "code", "hr", "h1", "h2", "h3", "h4", "h5", "h6",
 ]
 
+export function normalizeContentId(value: string): string {
+  return value.trim().replace(/^</, "").replace(/>$/, "")
+}
+
 export function sanitizeIncomingHtml(input: string): { html: string; hasRemoteImages: boolean } {
   const html = sanitizeHtml(input, {
     allowedTags: [...commonAllowedTags, "img"],
     allowedAttributes: {
       a: ["href", "title", "target", "rel"],
-      img: ["alt", "title", "width", "height", "data-mi-src"],
+      img: ["alt", "title", "width", "height", "data-mi-src", "data-mi-cid"],
     },
     allowedSchemes: ["http", "https", "mailto"],
     allowProtocolRelative: false,
@@ -26,7 +30,10 @@ export function sanitizeIncomingHtml(input: string): { html: string; hasRemoteIm
         delete next.src
         delete next.srcset
         delete next["data-mi-src"]
+        delete next["data-mi-cid"]
         if (/^https?:\/\//i.test(src)) next["data-mi-src"] = src
+        const cid = src.match(/^cid:(.+)$/i)
+        if (cid) next["data-mi-cid"] = normalizeContentId(cid[1])
         return { tagName: "img", attribs: next }
       },
     },

@@ -11,14 +11,22 @@ import { mapFolders, findSpecialFolder } from "./folders"
 import { decodeMessageKey, encodeMessageKey, type MessageKeyPayload } from "./message-key"
 import { MAX_DOWNLOAD_BYTES, MAX_MESSAGE_SOURCE_BYTES } from "./limits"
 import { attachmentBuffer, mapPostalAddresses, parseMessageSource, parseReferences } from "./parser"
-import { sanitizeIncomingHtml } from "./sanitizer"
+import { normalizeContentId, sanitizeIncomingHtml } from "./sanitizer"
 
 function isTimeout(error: unknown): boolean {
   const code = typeof error === "object" && error && "code" in error ? String((error as { code?: unknown }).code) : ""
   return ["ETIMEDOUT", "ESOCKETTIMEDOUT", "ETIMEOUT"].includes(code)
 }
 
-export function createImapClient(config: MailboxConfig): ImapFlow {
+type ImapTimeouts = {
+  connectionTimeout: number
+  greetingTimeout: number
+  socketTimeout: number
+}
+
+const DEFAULT_TIMEOUTS: ImapTimeouts = { connectionTimeout: 8_000, greetingTimeout: 8_000, socketTimeout: 25_000 }
+
+export function createImapClient(config: MailboxConfig, timeouts: ImapTimeouts = DEFAULT_TIMEOUTS): ImapFlow {
   return new ImapFlow({
     host: config.imap.host,
     port: config.imap.port,
@@ -27,17 +35,19 @@ export function createImapClient(config: MailboxConfig): ImapFlow {
     auth: { user: config.imap.username, pass: config.imap.password },
     disableAutoIdle: true,
     logger: false,
-    connectionTimeout: 8_000,
-    greetingTimeout: 8_000,
-    socketTimeout: 25_000,
+    ...timeouts,
     maxLiteralSize: MAX_MESSAGE_SOURCE_BYTES + 1024,
     maxLineLength: 1024 * 1024,
     tls: { rejectUnauthorized: true, servername: config.imap.host },
   })
 }
 
-export async function withImap<T>(config: MailboxConfig, operation: (client: ImapFlow) => Promise<T>): Promise<T> {
-  const client = createImapClient(config)
+export async function withImap<T>(
+  config: MailboxConfig,
+  operation: (client: ImapFlow) => Promise<T>,
+  timeouts?: ImapTimeouts,
+): Promise<T> {
+  const client = createImapClient(config, timeouts)
   try {
     await client.connect()
     return await operation(client)
@@ -111,7 +121,7 @@ function summaryFromFetch(message: FetchMessageObject, folder: string, uidValidi
 
 export async function getMessages(
   config: MailboxConfig,
-  input: { folder: string; page: number; limit: number; query: string },
+  input: { folder: string; page: number; limit: number; query: string; unseen?: boolean },
 ): Promise<MessagesResponse> {
   return withImap(config, async (client) => {
     const lock = await client.getMailboxLock(input.folder, { readOnly: true, description: "mailinlay:list" }).catch(() => {
@@ -125,10 +135,11 @@ export async function getMessages(
       let fetched: FetchMessageObject[] = []
       const query = input.query.trim()
 
-      if (query) {
-        const found = await client.search({
-          or: [{ from: query }, { to: query }, { cc: query }, { subject: query }],
-        }, { uid: true })
+      if (query || input.unseen) {
+        const criteria: Parameters<typeof client.search>[0] = {}
+        if (input.unseen) criteria.seen = false
+        if (query) criteria.or = [{ from: query }, { to: query }, { cc: query }, { subject: query }]
+        const found = await client.search(criteria, { uid: true })
         const uids = (found || []).sort((a, b) => b - a)
         total = uids.length
         const start = (input.page - 1) * input.limit
@@ -208,6 +219,7 @@ export async function getMessage(config: MailboxConfig, messageKey: string): Pro
           size: content.length,
           inline: attachment.disposition === "inline",
           downloadable: content.length <= MAX_DOWNLOAD_BYTES,
+          contentId: attachment.contentId ? normalizeContentId(attachment.contentId) : undefined,
         }
       })
 
@@ -311,6 +323,10 @@ export async function deleteMessage(config: MailboxConfig, messageKey: string) {
   })
 }
 
+// Short timeouts: the copy is best-effort and runs after SMTP delivery, so the
+// whole send flow has to fit within the route's maxDuration budget.
+const APPEND_TIMEOUTS: ImapTimeouts = { connectionTimeout: 4_000, greetingTimeout: 4_000, socketTimeout: 8_000 }
+
 export async function appendSentMessage(config: MailboxConfig, raw: Buffer) {
   return withImap(config, async (client) => {
     const folders = mapFolders(await listedFolders(client, config), config)
@@ -319,5 +335,5 @@ export async function appendSentMessage(config: MailboxConfig, raw: Buffer) {
     const result = await client.append(sent.path, raw, ["\\Seen"], new Date())
     if (!result) return { saved: false as const, warning: "SENT_SAVE_FAILED" as const }
     return { saved: true as const }
-  })
+  }, APPEND_TIMEOUTS)
 }

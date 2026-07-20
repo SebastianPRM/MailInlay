@@ -3,8 +3,11 @@ import type { GetMailbox, GetSession, MailboxConfig } from "@mailinlay/sdk/next"
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
 
 export const getSession: GetSession = async (request) => {
+  // The hostname checks below derive from the client-controlled Host header, so
+  // they are not a real boundary — the demo session must never exist in production.
+  if (process.env.NODE_ENV === "production") return null
   const url = new URL(request.url)
-  let host = ""
+  let host: string
   try { host = new URL(`http://${request.headers.get("host") ?? ""}`).hostname } catch { return null }
   if (process.env.MAILINLAY_DEMO_MODE !== "true" || !LOCAL_HOSTS.has(url.hostname) || !LOCAL_HOSTS.has(host)) return null
   return { userId: "local-admin", projectId: "mailinlay-demo" }

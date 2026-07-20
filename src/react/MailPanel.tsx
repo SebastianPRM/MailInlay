@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AlertTriangle, Check, Menu, PenSquare, RefreshCw, Wifi, X } from "lucide-react"
 import type { MailFolder, MailboxPublicInfo, MessageDetail, MessageSummary, SendResponse } from "../shared/types"
-import { createApi } from "./api"
+import { createApi, MailInlayApiError } from "./api"
 import { FolderList } from "./FolderList"
 import { MailComposer, type ComposeDraft } from "./MailComposer"
 import { MessageList } from "./MessageList"
 import { MessageReader, type ReplyMode } from "./MessageReader"
-import { cn, displayAddress, escapeHtml } from "./utils"
+import { cn, displayAddress, escapeHtml, resolveInlineImages } from "./utils"
 
 export type MailPanelProps = {
   apiBase: string
@@ -55,6 +55,7 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
   const [mobileReaderOpen, setMobileReaderOpen] = useState(false)
   const [composeOpen, setComposeOpen] = useState(false)
   const [composeDraft, setComposeDraft] = useState<ComposeDraft>({ mode: "new" })
+  const [sessionExpired, setSessionExpired] = useState(false)
   const [toast, setToast] = useState<Toast | null>(null)
   const toastTimer = useRef<number | undefined>(undefined)
 
@@ -66,8 +67,25 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
 
   useEffect(() => () => window.clearTimeout(toastTimer.current), [])
 
+  const reportError = useCallback((error: unknown, fallback: string, quiet = false) => {
+    if ((error as { name?: string } | null)?.name === "AbortError") return
+    if (error instanceof MailInlayApiError && error.status === 401) {
+      setSessionExpired(true)
+      return
+    }
+    if (!quiet) showToast(error instanceof Error ? error.message : fallback, "error")
+  }, [showToast])
+
+  const adjustUnread = useCallback((folderPath: string | null, delta: number) => {
+    if (!folderPath) return
+    setFolders((items) => items.map((folder) => folder.path === folderPath && folder.unread !== undefined
+      ? { ...folder, unread: Math.max(0, folder.unread + delta) }
+      : folder))
+  }, [])
+
   const loadFolders = useCallback(async (signal?: AbortSignal) => {
     const response = await api.folders(signal)
+    setSessionExpired(false)
     setMailbox(response.mailbox)
     setFolders(response.folders)
     setActiveFolder((current) => current ?? response.folders.find((folder) => folder.specialUse === "inbox")?.path ?? response.folders[0]?.path ?? null)
@@ -78,10 +96,10 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
     const controller = new AbortController()
     setLoadingFolders(true)
     loadFolders(controller.signal)
-      .catch((error) => { if (error?.name !== "AbortError") showToast(error instanceof Error ? error.message : "Nie udało się połączyć ze skrzynką.", "error") })
+      .catch((error) => reportError(error, "Nie udało się połączyć ze skrzynką."))
       .finally(() => setLoadingFolders(false))
     return () => controller.abort()
-  }, [loadFolders, showToast])
+  }, [loadFolders, reportError])
 
   useEffect(() => {
     if (!activeFolder) return
@@ -89,16 +107,16 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
     setLoadingMessages(true)
     setPage(1)
     setDetail(null)
-    api.messages({ folder: activeFolder, page: 1, query }, controller.signal)
+    api.messages({ folder: activeFolder, page: 1, query, unseen: unreadOnly }, controller.signal)
       .then((response) => {
         setMessages(response.items)
         setHasMore(response.hasMore)
-        setSelectedKey((current) => response.items.some((message) => message.messageKey === current) ? current : response.items[0]?.messageKey ?? null)
+        setSelectedKey((current) => response.items.some((message) => message.messageKey === current) ? current : null)
       })
-      .catch((error) => { if (error?.name !== "AbortError") showToast(error instanceof Error ? error.message : "Nie udało się pobrać wiadomości.", "error") })
+      .catch((error) => reportError(error, "Nie udało się pobrać wiadomości."))
       .finally(() => setLoadingMessages(false))
     return () => controller.abort()
-  }, [activeFolder, api, query, showToast])
+  }, [activeFolder, api, query, unreadOnly, reportError])
 
   useEffect(() => {
     if (!selectedKey) {
@@ -109,44 +127,60 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
     setLoadingDetail(true)
     api.message(selectedKey, controller.signal)
       .then(async (message) => {
-        setDetail(message)
+        const html = message.html && message.attachments.some((attachment) => attachment.contentId)
+          ? resolveInlineImages(message.html, message.attachments, (attachmentId) => api.attachmentUrl(selectedKey, attachmentId))
+          : message.html
+        setDetail({ ...message, html })
         if (!message.seen) {
           setMessages((items) => items.map((item) => item.messageKey === selectedKey ? { ...item, seen: true } : item))
           setDetail((current) => current ? { ...current, seen: true } : current)
+          adjustUnread(activeFolder, -1)
           api.update(selectedKey, { seen: true }).catch(() => undefined)
         }
       })
-      .catch((error) => { if (error?.name !== "AbortError") showToast(error instanceof Error ? error.message : "Nie udało się otworzyć wiadomości.", "error") })
+      .catch((error) => reportError(error, "Nie udało się otworzyć wiadomości."))
       .finally(() => setLoadingDetail(false))
     return () => controller.abort()
-  }, [api, selectedKey, showToast])
+    // activeFolder is intentionally omitted: selection is always reset when the folder changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api, selectedKey, adjustUnread, reportError])
 
   const refresh = useCallback(async (quiet = false) => {
-    if (!activeFolder || refreshing) return
+    if (!activeFolder || refreshing || sessionExpired) return
     setRefreshing(true)
     try {
       await loadFolders()
-      const response = await api.messages({ folder: activeFolder, page: 1, query })
+      const response = await api.messages({ folder: activeFolder, page: 1, query, unseen: unreadOnly })
       setMessages(response.items)
       setPage(1)
       setHasMore(response.hasMore)
       if (selectedKey && !response.items.some((message) => message.messageKey === selectedKey)) {
-        setSelectedKey(response.items[0]?.messageKey ?? null)
+        setSelectedKey(null)
       }
       if (!quiet) showToast("Skrzynka jest aktualna")
     } catch (error) {
-      if (!quiet) showToast(error instanceof Error ? error.message : "Odświeżenie nie powiodło się.", "error")
+      reportError(error, "Odświeżenie nie powiodło się.", quiet)
     } finally {
       setRefreshing(false)
     }
-  }, [activeFolder, api, loadFolders, query, refreshing, selectedKey, showToast])
+  }, [activeFolder, api, loadFolders, query, refreshing, selectedKey, sessionExpired, showToast, unreadOnly, reportError])
+
+  const refreshRef = useRef(refresh)
+  useEffect(() => { refreshRef.current = refresh }, [refresh])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") void refresh(true)
+      if (document.visibilityState === "visible") void refreshRef.current(true)
     }, 45_000)
-    return () => window.clearInterval(timer)
-  }, [refresh])
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refreshRef.current(true)
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
+  }, [])
 
   const selectFolder = (path: string) => {
     setActiveFolder(path)
@@ -172,16 +206,13 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
     } catch (error) {
       setMessages((items) => items.map((item) => item.messageKey === message.messageKey ? { ...item, flagged: !flagged } : item))
       setDetail((current) => current?.messageKey === message.messageKey ? { ...current, flagged: !flagged } : current)
-      showToast(error instanceof Error ? error.message : "Nie udało się zmienić gwiazdki.", "error")
+      reportError(error, "Nie udało się zmienić gwiazdki.")
     }
   }
 
   const removeCurrent = () => {
-    setMessages((items) => {
-      const remaining = items.filter((item) => item.messageKey !== selectedKey)
-      setSelectedKey(remaining[0]?.messageKey ?? null)
-      return remaining
-    })
+    setMessages((items) => items.filter((item) => item.messageKey !== selectedKey))
+    setSelectedKey(null)
     setMobileReaderOpen(false)
     void loadFolders().catch(() => undefined)
   }
@@ -193,7 +224,7 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
       removeCurrent()
       showToast(confirmation)
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Nie udało się przenieść wiadomości.", "error")
+      reportError(error, "Nie udało się przenieść wiadomości.")
     }
   }
 
@@ -206,7 +237,7 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
         removeCurrent()
         showToast("Wiadomość została trwale usunięta")
       } catch (error) {
-        showToast(error instanceof Error ? error.message : "Nie udało się usunąć wiadomości.", "error")
+        reportError(error, "Nie udało się usunąć wiadomości.")
       }
       return
     }
@@ -218,9 +249,10 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
       await api.update(message.messageKey, { seen: false })
       setMessages((items) => items.map((item) => item.messageKey === message.messageKey ? { ...item, seen: false } : item))
       setDetail((current) => current ? { ...current, seen: false } : current)
+      adjustUnread(activeFolder, 1)
       showToast("Wiadomość oznaczono jako nieprzeczytaną")
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Nie udało się zmienić statusu.", "error")
+      reportError(error, "Nie udało się zmienić statusu.")
     }
   }
 
@@ -254,7 +286,8 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
   const send = async (form: FormData): Promise<SendResponse> => {
     const result = await api.send(form)
     setComposeOpen(false)
-    showToast(result.savedToSent ? "Wiadomość została wysłana" : "Wysłano, ale serwer nie zapisał kopii w Wysłanych", result.savedToSent ? "success" : "error")
+    const savedOrSkipped = result.savedToSent === true || result.savedToSent === "skipped"
+    showToast(savedOrSkipped ? "Wiadomość została wysłana" : "Wysłano, ale serwer nie zapisał kopii w Wysłanych", savedOrSkipped ? "success" : "error")
     void loadFolders().catch(() => undefined)
     return result
   }
@@ -299,12 +332,12 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
               if (!activeFolder || loadingMore) return
               setLoadingMore(true)
               try {
-                const response = await api.messages({ folder: activeFolder, page: page + 1, query })
+                const response = await api.messages({ folder: activeFolder, page: page + 1, query, unseen: unreadOnly })
                 setMessages((items) => [...items, ...response.items.filter((next) => !items.some((item) => item.messageKey === next.messageKey))])
                 setPage(response.page)
                 setHasMore(response.hasMore)
               } catch (error) {
-                showToast(error instanceof Error ? error.message : "Nie udało się pobrać kolejnych wiadomości.", "error")
+                reportError(error, "Nie udało się pobrać kolejnych wiadomości.")
               } finally { setLoadingMore(false) }
             }}
           />
@@ -323,7 +356,7 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
             onReply={reply}
             onDownload={async (message, attachment) => {
               try { await api.download(message.messageKey, attachment.attachmentId, attachment.filename) }
-              catch (error) { showToast(error instanceof Error ? error.message : "Nie udało się pobrać załącznika.", "error") }
+              catch (error) { reportError(error, "Nie udało się pobrać załącznika.") }
             }}
             onBack={() => setMobileReaderOpen(false)}
           />
@@ -333,6 +366,24 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
       {foldersOpen && <div className="mail-drawer" role="dialog" aria-modal="true" aria-label="Foldery poczty"><button type="button" className="mail-drawer__scrim" onClick={() => setFoldersOpen(false)} aria-label="Zamknij foldery" /><div className="mail-drawer__panel"><button type="button" onClick={() => setFoldersOpen(false)} aria-label="Zamknij foldery" className="mail-drawer__close"><X aria-hidden="true" /></button><FolderList folders={folders} mailbox={mailbox} activeFolder={activeFolder} onSelect={selectFolder} onCompose={() => openCompose()} drawer /></div></div>}
 
       <MailComposer open={composeOpen} from={mailbox?.email ?? ""} draft={composeDraft} onClose={() => setComposeOpen(false)} onSend={send} />
+      {sessionExpired && (
+        <div className="mail-session-expired" role="alert">
+          <AlertTriangle aria-hidden="true" />
+          <span>Sesja panelu wygasła. Zaloguj się ponownie w panelu administracyjnym.</span>
+          <button
+            type="button"
+            onClick={() => {
+              setSessionExpired(false)
+              setLoadingFolders(true)
+              loadFolders()
+                .catch((error) => reportError(error, "Nie udało się połączyć ze skrzynką."))
+                .finally(() => setLoadingFolders(false))
+            }}
+          >
+            Spróbuj ponownie
+          </button>
+        </div>
+      )}
       {toast && <div className={cn("mail-toast", toast.kind === "error" && "is-error")} role="status">{toast.kind === "error" ? <AlertTriangle aria-hidden="true" /> : <Check aria-hidden="true" />}{toast.text}</div>}
     </section>
   )

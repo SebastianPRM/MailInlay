@@ -2,6 +2,35 @@
 
 All notable changes to MailInlay are recorded here.
 
+## [0.2.0] - 2026-07-20
+
+### Added
+
+- inline `cid:` images resolved through the protected attachment endpoint;
+- server-side unread-only filter backed by IMAP `SEARCH UNSEEN`;
+- per-session rate limit for sending (10 messages per minute);
+- optional `allowedOrigins` handler option for reverse-proxy deployments;
+- persistent "session expired" state with a retry action instead of repeated error toasts;
+- immediate mailbox refresh when the browser tab becomes visible again;
+- IMAP unit tests (pagination, `uidValidity` staleness, Trash-only permanent delete).
+
+### Changed
+
+- opening a folder no longer auto-opens the newest message, so unread state is preserved
+  until the user actually reads a message (also on mobile);
+- closing the composer with unsaved content now asks for confirmation (scrim, Escape,
+  close button and "Odrzuć");
+- unread counters in the folder sidebar update immediately after reading or marking unread;
+- `savedToSent` reports `"skipped"` when the Sent copy is intentionally disabled;
+- the IMAP Sent-copy append uses short timeouts so the send flow fits the route budget;
+- `In-Reply-To` and `References` entries are limited to 998 characters;
+- unexpected server errors are now logged with details (server-side only);
+- the bundled demo session is additionally disabled in production builds.
+
+### Removed
+
+- unused v0 prototype components and mock mail data from the demo application.
+
 ## [0.1.0] - 2026-07-17
 
 ### Added

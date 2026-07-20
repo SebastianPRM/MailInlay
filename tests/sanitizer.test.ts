@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { sanitizeIncomingHtml, sanitizeOutgoingHtml } from "../src/server/sanitizer"
+import { resolveInlineImages } from "../src/react/utils"
 
 describe("mail HTML sanitizer", () => {
   it("removes executable markup and blocks remote image loading", () => {
@@ -21,5 +22,28 @@ describe("mail HTML sanitizer", () => {
     const result = sanitizeIncomingHtml('<img data-mi-src="javascript:alert(1)">')
     expect(result.html).not.toContain("data-mi-src")
     expect(result.hasRemoteImages).toBe(false)
+  })
+
+  it("keeps inline cid images as neutral markers without counting them as remote", () => {
+    const result = sanitizeIncomingHtml('<img src="cid:<logo@example>" alt="Logo"><img data-mi-cid="spoofed">')
+    expect(result.html).toContain('data-mi-cid="logo@example"')
+    expect(result.html).not.toContain("spoofed")
+    expect(result.hasRemoteImages).toBe(false)
+  })
+
+  it("resolves cid markers only to matching downloadable attachments", () => {
+    const html = '<img data-mi-cid="logo@example" alt="Logo"><img data-mi-cid="missing@example" alt="Brak">'
+    const attachment = {
+      attachmentId: "0",
+      filename: "logo.png",
+      contentType: "image/png",
+      size: 100,
+      inline: true,
+      downloadable: true,
+      contentId: "logo@example",
+    }
+    const resolved = resolveInlineImages(html, [attachment], (attachmentId) => `/api/admin/mail/att/${attachmentId}`)
+    expect(resolved).toContain('src="/api/admin/mail/att/0"')
+    expect(resolved).toContain('data-mi-cid="missing@example"')
   })
 })

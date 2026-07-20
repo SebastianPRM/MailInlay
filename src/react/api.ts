@@ -36,8 +36,9 @@ export function createApi(apiBase: string, mailboxId: string) {
     folders(signal?: AbortSignal) {
       return request<FoldersResponse>(url(apiBase, "folders", mailboxId), { signal })
     },
-    messages(input: { folder: string; page: number; limit?: number; query?: string }, signal?: AbortSignal) {
-      return request<MessagesResponse>(url(apiBase, "messages", mailboxId, input), { signal })
+    messages(input: { folder: string; page: number; limit?: number; query?: string; unseen?: boolean }, signal?: AbortSignal) {
+      const { unseen, ...params } = input
+      return request<MessagesResponse>(url(apiBase, "messages", mailboxId, { ...params, unseen: unseen ? "1" : undefined }), { signal })
     },
     message(messageKey: string, signal?: AbortSignal) {
       return request<MessageDetail>(url(apiBase, `messages/${encodeURIComponent(messageKey)}`, mailboxId), { signal })
@@ -61,6 +62,9 @@ export function createApi(apiBase: string, mailboxId: string) {
     },
     send(form: FormData) {
       return request<SendResponse>(url(apiBase, "send", mailboxId), { method: "POST", body: form })
+    },
+    attachmentUrl(messageKey: string, attachmentId: string) {
+      return url(apiBase, `messages/${encodeURIComponent(messageKey)}/attachments/${encodeURIComponent(attachmentId)}`, mailboxId)
     },
     async download(messageKey: string, attachmentId: string, filename: string) {
       const response = await fetch(url(apiBase, `messages/${encodeURIComponent(messageKey)}/attachments/${encodeURIComponent(attachmentId)}`, mailboxId), {

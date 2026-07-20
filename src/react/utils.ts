@@ -1,4 +1,4 @@
-import type { EmailAddress } from "../shared/types"
+import type { EmailAddress, MessageAttachment } from "../shared/types"
 
 export function cn(...values: Array<string | false | null | undefined>): string {
   return values.filter(Boolean).join(" ")
@@ -47,4 +47,24 @@ export function formatBytes(bytes: number): string {
 
 export function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+}
+
+function decodeEntities(value: string): string {
+  return value.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
+}
+
+// Replaces sanitized `data-mi-cid` markers with same-origin attachment URLs so
+// inline (cid:) images render. Operates on sanitizer output, where attribute
+// values are entity-escaped, so the injected src cannot break out of its quotes.
+export function resolveInlineImages(
+  html: string,
+  attachments: MessageAttachment[],
+  attachmentUrl: (attachmentId: string) => string,
+): string {
+  return html.replace(/data-mi-cid="([^"]*)"/g, (match, escapedCid: string) => {
+    const cid = decodeEntities(escapedCid)
+    const attachment = attachments.find((item) => item.contentId === cid && item.downloadable)
+    if (!attachment) return match
+    return `src="${escapeHtml(attachmentUrl(attachment.attachmentId))}"`
+  })
 }

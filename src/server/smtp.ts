@@ -6,6 +6,7 @@ import type { EmailAddress, MailboxConfig, SendResponse } from "../shared/types"
 import {
   MAX_BODY_BYTES,
   MAX_RECIPIENTS,
+  MAX_REFERENCE_LENGTH,
   MAX_SUBJECT_LENGTH,
   MAX_UPLOAD_FILE_BYTES,
   MAX_UPLOAD_FILES,
@@ -44,6 +45,11 @@ function field(form: FormData, name: string): string {
 
 function rejectHeaderInjection(value: string) {
   if (/\r|\n/.test(value)) throw errors.invalidRequest()
+}
+
+function validateMessageIdHeader(value: string) {
+  rejectHeaderInjection(value)
+  if (value.length > MAX_REFERENCE_LENGTH) throw errors.invalidRequest()
 }
 
 function textToHtml(value: string): string {
@@ -111,9 +117,9 @@ export async function sendMessage(config: MailboxConfig, form: FormData): Promis
     }
 
     const inReplyTo = field(form, "inReplyTo").trim() || undefined
-    if (inReplyTo) rejectHeaderInjection(inReplyTo)
+    if (inReplyTo) validateMessageIdHeader(inReplyTo)
     const references = parseReferences(field(form, "references"))
-    references.forEach(rejectHeaderInjection)
+    references.forEach(validateMessageIdHeader)
     const uploads = await parseUploads(form)
 
     const bodyHtml = sanitizeOutgoingHtml(bodyHtmlInput || textToHtml(bodyText))
@@ -153,7 +159,7 @@ export async function sendMessage(config: MailboxConfig, form: FormData): Promis
     }
 
     if (config.saveToSent === false) {
-      return { ok: true, sent: true, savedToSent: true, messageId: compiled.messageId }
+      return { ok: true, sent: true, savedToSent: "skipped", messageId: compiled.messageId }
     }
 
     try {

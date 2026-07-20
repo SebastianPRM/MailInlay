@@ -22,7 +22,9 @@ type Props = {
 }
 
 export function MessageList(props: Props) {
-  const visible = props.unreadOnly ? props.messages.filter((message) => !message.seen) : props.messages
+  // The unread-only filter is applied server-side (IMAP SEARCH UNSEEN); a message
+  // opened while the filter is active stays visible until the next reload.
+  const visible = props.messages
   const unread = visible.filter((message) => !message.seen).length
 
   return (

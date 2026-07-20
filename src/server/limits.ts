@@ -8,3 +8,6 @@ export const MAX_UPLOAD_FILES = 10
 export const MAX_RECIPIENTS = 25
 export const MAX_BODY_BYTES = 1024 * 1024
 export const MAX_SUBJECT_LENGTH = 500
+export const MAX_REFERENCE_LENGTH = 998
+export const SEND_RATE_LIMIT = 10
+export const SEND_RATE_WINDOW_MS = 60_000

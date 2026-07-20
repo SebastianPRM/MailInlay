@@ -60,12 +60,28 @@ export function MailComposer({ open, from, draft, onClose, onSend }: Props) {
     window.setTimeout(() => toRef.current?.focus(), 50)
   }, [draft, open])
 
+  const dirty =
+    to !== (draft.to ?? "") ||
+    cc !== (draft.cc ?? "") ||
+    bcc !== "" ||
+    subject !== (draft.subject ?? "") ||
+    bodyText.trim() !== (draft.bodyText ?? "").trim() ||
+    attachments.length > 0
+
+  const requestClose = () => {
+    if (sending) return
+    if (dirty && !window.confirm("Odrzucić tę wiadomość? Wpisana treść nie zostanie zapisana.")) return
+    onClose()
+  }
+  const requestCloseRef = useRef(requestClose)
+  requestCloseRef.current = requestClose
+
   useEffect(() => {
     if (!open) return
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !sending) {
+      if (event.key === "Escape") {
         event.preventDefault()
-        onClose()
+        requestCloseRef.current()
         return
       }
       if (event.key !== "Tab") return
@@ -85,7 +101,7 @@ export function MailComposer({ open, from, draft, onClose, onSend }: Props) {
     }
     document.addEventListener("keydown", onKeyDown)
     return () => document.removeEventListener("keydown", onKeyDown)
-  }, [onClose, open, sending])
+  }, [open])
 
   if (!open || !mounted) return null
 
@@ -123,11 +139,11 @@ export function MailComposer({ open, from, draft, onClose, onSend }: Props) {
 
   return createPortal(
     <div className="compose-layer" role="dialog" aria-modal="true" aria-labelledby="compose-title">
-      <button type="button" className="compose-layer__scrim" onClick={onClose} aria-label="Zamknij edytor" />
+      <button type="button" className="compose-layer__scrim" onClick={requestClose} aria-label="Zamknij edytor" />
       <section ref={sheetRef} className="compose-sheet">
         <header>
           <div><span className="compose-sheet__mark">MI</span><div><h2 id="compose-title">{title}</h2><p>Z konta {from}</p></div></div>
-          <button type="button" onClick={onClose} aria-label="Zamknij"><X aria-hidden="true" /></button>
+          <button type="button" onClick={requestClose} aria-label="Zamknij"><X aria-hidden="true" /></button>
         </header>
 
         <div className="compose-fields">
@@ -146,7 +162,7 @@ export function MailComposer({ open, from, draft, onClose, onSend }: Props) {
         <footer>
           <input ref={inputRef} className="compose-file-input" type="file" multiple onChange={(event) => { const files = Array.from(event.target.files ?? []); setAttachments((current) => [...current, ...files].slice(0, 10)); event.target.value = "" }} />
           <button type="button" className="compose-attachment" onClick={() => inputRef.current?.click()}><Paperclip aria-hidden="true" /><span>Załącz plik</span></button>
-          <div><button type="button" onClick={onClose} className="compose-discard">Odrzuć</button><button type="button" onClick={submit} className="compose-send" disabled={sending}><Send aria-hidden="true" />{sending ? "Wysyłanie…" : "Wyślij"}</button></div>
+          <div><button type="button" onClick={requestClose} className="compose-discard">Odrzuć</button><button type="button" onClick={submit} className="compose-send" disabled={sending}><Send aria-hidden="true" />{sending ? "Wysyłanie…" : "Wyślij"}</button></div>
         </footer>
       </section>
     </div>,

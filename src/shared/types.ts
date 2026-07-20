@@ -76,6 +76,7 @@ export type MessageAttachment = {
   size: number
   inline: boolean
   downloadable: boolean
+  contentId?: string
 }
 
 export type MessageDetail = MessageSummary & {
@@ -107,7 +108,7 @@ export type MessagesResponse = {
 export type SendResponse = {
   ok: true
   sent: true
-  savedToSent: boolean
+  savedToSent: boolean | "skipped"
   warning?: "SENT_SAVE_FAILED" | "SENT_FOLDER_NOT_FOUND"
   messageId?: string
 }

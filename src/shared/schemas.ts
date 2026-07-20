@@ -11,6 +11,10 @@ export const listMessagesSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(30),
   query: z.string().trim().max(200).default(""),
+  unseen: z
+    .string()
+    .default("")
+    .transform((value) => value === "1" || value === "true"),
 })
 
 export const updateMessageSchema = z
@@ -24,4 +28,4 @@ export const moveMessageSchema = z.object({
   destinationFolder: folderPathSchema,
 })
 
-export const emailSchema = z.string().trim().email().max(320)
+export const emailSchema = z.email().max(320)
