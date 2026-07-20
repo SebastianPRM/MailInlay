@@ -51,7 +51,7 @@ Each request authenticates the current panel session, resolves a mailbox limited
 Pin applications to a release tag:
 
 ```bash
-npm install "git+https://github.com/SebastianPRM/MailInlay.git#v0.1.0"
+npm install "git+https://github.com/SebastianPRM/MailInlay.git#v0.2.0"
 ```
 
 The installed package exposes:
