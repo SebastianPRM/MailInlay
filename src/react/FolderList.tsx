@@ -46,7 +46,7 @@ export function FolderList({ folders, mailbox, activeFolder, onSelect, onCompose
           {folders.map((folder) => {
             const Icon = folder.specialUse ? icons[folder.specialUse] : File
             const active = folder.path === activeFolder
-            const count = folder.specialUse === "inbox" ? folder.unread : folder.total
+            const count = folder.specialUse === "inbox" ? folder.unread : undefined
             return (
               <li key={folder.path}>
                 <button
