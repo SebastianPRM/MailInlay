@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { AlertTriangle, Check, Menu, PenSquare, RefreshCw, Wifi, X } from "lucide-react"
+import { AlertTriangle, Check, Menu, PenSquare, RefreshCw, Settings, Wifi, X } from "lucide-react"
 import type { MailFolder, MailboxPublicInfo, MessageDetail, MessageSummary, SendResponse } from "../shared/types"
 import { createApi, MailInlayApiError } from "./api"
 import { FolderList } from "./FolderList"
@@ -14,6 +14,11 @@ export type MailPanelProps = {
   apiBase: string
   mailboxId: string
   className?: string
+  defaultFoldersCollapsed?: boolean
+  foldersCollapsed?: boolean
+  onFoldersCollapsedChange?: (collapsed: boolean) => void
+  onOpenSettings?: () => void
+  showSettings?: boolean
 }
 
 type Toast = { kind: "success" | "error"; text: string }
@@ -33,7 +38,16 @@ function prefixSubject(subject: string, prefix: "Re" | "Fwd") {
   return new RegExp(`^${prefix}:`, "i").test(subject) ? subject : `${prefix}: ${subject}`
 }
 
-export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
+export function MailPanel({
+  apiBase,
+  mailboxId,
+  className,
+  defaultFoldersCollapsed = false,
+  foldersCollapsed: controlledFoldersCollapsed,
+  onFoldersCollapsedChange,
+  onOpenSettings,
+  showSettings,
+}: MailPanelProps) {
   const api = useMemo(() => createApi(apiBase, mailboxId), [apiBase, mailboxId])
   const [mailbox, setMailbox] = useState<MailboxPublicInfo | null>(null)
   const [folders, setFolders] = useState<MailFolder[]>([])
@@ -52,12 +66,19 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
   const [loadingMore, setLoadingMore] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [foldersOpen, setFoldersOpen] = useState(false)
+  const [uncontrolledFoldersCollapsed, setUncontrolledFoldersCollapsed] = useState(defaultFoldersCollapsed)
   const [mobileReaderOpen, setMobileReaderOpen] = useState(false)
   const [composeOpen, setComposeOpen] = useState(false)
   const [composeDraft, setComposeDraft] = useState<ComposeDraft>({ mode: "new" })
   const [sessionExpired, setSessionExpired] = useState(false)
   const [toast, setToast] = useState<Toast | null>(null)
   const toastTimer = useRef<number | undefined>(undefined)
+  const foldersCollapsed = controlledFoldersCollapsed ?? uncontrolledFoldersCollapsed
+
+  const setFoldersCollapsed = useCallback((collapsed: boolean) => {
+    if (controlledFoldersCollapsed === undefined) setUncontrolledFoldersCollapsed(collapsed)
+    onFoldersCollapsedChange?.(collapsed)
+  }, [controlledFoldersCollapsed, onFoldersCollapsedChange])
 
   const showToast = useCallback((text: string, kind: Toast["kind"] = "success") => {
     window.clearTimeout(toastTimer.current)
@@ -297,7 +318,7 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
   const initialLoading = loadingFolders && !mailbox
 
   return (
-    <section className={cn("mail-inlay", mobileReaderOpen && "is-reader-open", className)} aria-label="MailInlay — skrzynka pocztowa">
+    <section className={cn("mail-inlay", foldersCollapsed && "is-folders-collapsed", mobileReaderOpen && "is-reader-open", className)} aria-label="MailInlay — skrzynka pocztowa">
       <header className="mail-inlay__topbar">
         <div className="mail-inlay__identity">
           <button type="button" onClick={() => setFoldersOpen(true)} aria-label="Otwórz foldery" className="mail-folder-trigger"><Menu aria-hidden="true" /></button>
@@ -305,6 +326,12 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
           <div><strong>MailInlay</strong><span>{mailbox?.email ?? (initialLoading ? "Łączenie…" : "Skrzynka projektu")}</span></div>
         </div>
         <div className="mail-inlay__status">
+          {onOpenSettings && showSettings !== false && (
+            <button type="button" className="mail-settings-button" onClick={onOpenSettings} aria-label="Otwórz ustawienia poczty" title="Ustawienia poczty">
+              <Settings aria-hidden="true" />
+              <span>Ustawienia</span>
+            </button>
+          )}
           <span className={cn("mail-sync-state", !mailbox && "is-offline")}><Wifi aria-hidden="true" /><span>{mailbox ? "IMAP połączony" : "Brak połączenia"}</span></span>
           <button type="button" className="mail-check-button" onClick={() => void refresh()} disabled={refreshing || !activeFolder}><RefreshCw className={cn(refreshing && "animate-spin")} aria-hidden="true" /><span>{refreshing ? "Sprawdzanie…" : "Sprawdź pocztę"}</span></button>
           <button type="button" className="mail-quick-compose" onClick={() => openCompose()} disabled={!mailbox}><PenSquare aria-hidden="true" /><span>Napisz</span></button>
@@ -312,7 +339,7 @@ export function MailPanel({ apiBase, mailboxId, className }: MailPanelProps) {
       </header>
 
       <div className="mail-inlay__body">
-        <div className="mail-folders-pane"><FolderList folders={folders} mailbox={mailbox} activeFolder={activeFolder} onSelect={selectFolder} onCompose={() => openCompose()} /></div>
+        <div className="mail-folders-pane"><FolderList folders={folders} mailbox={mailbox} activeFolder={activeFolder} onSelect={selectFolder} onCompose={() => openCompose()} collapsed={foldersCollapsed} onCollapsedChange={setFoldersCollapsed} /></div>
         <div className="mail-list-pane">
           <MessageList
             title={activeFolderItem?.name ?? (initialLoading ? "Łączenie…" : "Poczta")}

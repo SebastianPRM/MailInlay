@@ -1,6 +1,6 @@
 "use client"
 
-import { Archive, File, Inbox, PenSquare, Send, Settings, ShieldAlert, Trash2 } from "lucide-react"
+import { Archive, File, Inbox, PanelLeftClose, PanelLeftOpen, PenSquare, Send, ShieldAlert, Trash2 } from "lucide-react"
 import type { MailFolder, MailboxPublicInfo } from "../shared/types"
 import { cn, initials } from "./utils"
 
@@ -19,13 +19,15 @@ type Props = {
   activeFolder: string | null
   onSelect: (path: string) => void
   onCompose: () => void
+  collapsed?: boolean
+  onCollapsedChange?: (collapsed: boolean) => void
   drawer?: boolean
 }
 
-export function FolderList({ folders, mailbox, activeFolder, onSelect, onCompose, drawer = false }: Props) {
+export function FolderList({ folders, mailbox, activeFolder, onSelect, onCompose, collapsed = false, onCollapsedChange, drawer = false }: Props) {
   return (
-    <aside className={cn("mail-folder-sidebar", drawer && "is-drawer") }>
-      <div className="mail-account">
+    <aside className={cn("mail-folder-sidebar", collapsed && !drawer && "is-collapsed", drawer && "is-drawer") }>
+      <div className="mail-account" title={mailbox?.displayName || mailbox?.email || "Skrzynka projektu"}>
         <span className="mail-account__avatar">{initials(mailbox?.displayName || mailbox?.email || "MI")}</span>
         <span className="mail-account__copy">
           <strong>{mailbox?.displayName || "Skrzynka projektu"}</strong>
@@ -67,18 +69,28 @@ export function FolderList({ folders, mailbox, activeFolder, onSelect, onCompose
         </ul>
       </nav>
 
-      <div className="mail-folder-footer">
-        {mailbox?.storageUsedPercent !== undefined && (
+      {!drawer && onCollapsedChange && (
+        <button
+          type="button"
+          className="mail-folders-collapse"
+          onClick={() => onCollapsedChange(!collapsed)}
+          aria-label={collapsed ? "Rozwiń panel folderów" : "Zwiń panel folderów"}
+          aria-expanded={!collapsed}
+          title={collapsed ? "Rozwiń panel folderów" : "Zwiń panel folderów"}
+        >
+          {collapsed ? <PanelLeftOpen aria-hidden="true" /> : <PanelLeftClose aria-hidden="true" />}
+          <span>{collapsed ? "Rozwiń" : "Zwiń"}</span>
+        </button>
+      )}
+
+      {mailbox?.storageUsedPercent !== undefined && (
+        <div className="mail-folder-footer">
           <div className="mail-storage">
             <span><span>Wykorzystano</span><b>{mailbox.storageUsedPercent}%</b></span>
             <i><span style={{ width: `${mailbox.storageUsedPercent}%` }} /></i>
           </div>
-        )}
-        <button type="button" className="mail-settings-button" title="Konfiguracją zarządza panel nadrzędny" disabled>
-          <Settings aria-hidden="true" />
-          <span>Ustawienia w panelu</span>
-        </button>
-      </div>
+        </div>
+      )}
     </aside>
   )
 }

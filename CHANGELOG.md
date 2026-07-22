@@ -2,6 +2,36 @@
 
 All notable changes to MailInlay are recorded here.
 
+## [0.3.1] - 2026-07-22
+
+### Added
+
+- controlled and uncontrolled desktop folder-panel collapsing through
+  `foldersCollapsed`, `defaultFoldersCollapsed` and
+  `onFoldersCollapsedChange`;
+- optional host-owned settings action through `onOpenSettings` and
+  `showSettings`;
+- namespaced color and typography tokens, including dark-theme-compatible
+  composer, editor and attachment styling.
+
+### Changed
+
+- folder badges are rendered only for a non-zero Inbox unread count;
+- the medium-width layout uses an automatic icon rail while the phone layout
+  keeps the folder drawer;
+- MailPanel and its panes fill and shrink within flex containers without a
+  fixed minimum height;
+- default UI, metadata and message-body typography is larger and uses the host
+  font token;
+- selected and unread messages use separate visual signals;
+- the demo imports the SDK stylesheet as its single MailInlay style source.
+
+### Removed
+
+- the permanently disabled settings placeholder;
+- internal definitions of generic CSS variables such as `--primary`,
+  `--background` and `--sidebar`.
+
 ## [0.3.0] - 2026-07-20
 
 ### Added

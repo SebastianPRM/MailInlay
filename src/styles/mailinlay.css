@@ -1,25 +1,35 @@
-.mail-inlay {
-  --background: var(--mi-background, oklch(0.985 0.002 250));
-  --foreground: var(--mi-text, oklch(0.21 0.02 260));
-  --card: var(--mi-surface, oklch(1 0 0));
-  --card-foreground: var(--mi-text, oklch(0.21 0.02 260));
-  --popover: var(--mi-surface, oklch(1 0 0));
-  --popover-foreground: var(--mi-text, oklch(0.21 0.02 260));
-  --primary: var(--mi-primary, oklch(0.55 0.215 263));
-  --primary-foreground: oklch(0.99 0 0);
-  --muted: var(--mi-surface-hover, oklch(0.965 0.004 250));
-  --muted-foreground: var(--mi-muted, oklch(0.52 0.02 258));
-  --accent: var(--mi-surface-hover, oklch(0.955 0.017 258));
-  --accent-foreground: oklch(0.45 0.16 263);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: var(--mi-border, oklch(0.922 0.004 258));
-  --input: var(--mi-border, oklch(0.922 0.004 258));
-  --ring: oklch(0.55 0.215 263);
-  --sidebar: oklch(0.982 0.003 255);
-  --sidebar-foreground: oklch(0.35 0.02 260);
-  --sidebar-accent: oklch(0.94 0.02 258);
-  --sidebar-accent-foreground: oklch(0.45 0.16 263);
-  font-family: var(--mi-font-family, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+.mail-inlay,
+.compose-layer {
+  /* Public --mi-* tokens resolve into private values without shadowing host tokens. */
+  --mi-color-background-resolved: var(--mi-color-background, var(--mi-background, oklch(0.985 0.002 250)));
+  --mi-color-foreground-resolved: var(--mi-color-foreground, var(--mi-text, oklch(0.21 0.02 260)));
+  --mi-color-card-resolved: var(--mi-color-card, var(--mi-surface, oklch(1 0 0)));
+  --mi-color-popover-resolved: var(--mi-color-popover, var(--mi-color-card, var(--mi-surface, oklch(1 0 0))));
+  --mi-color-primary-resolved: var(--mi-color-primary, var(--mi-primary, oklch(0.55 0.215 263)));
+  --mi-color-primary-foreground-resolved: var(--mi-color-primary-foreground, oklch(0.99 0 0));
+  --mi-color-muted-resolved: var(--mi-color-muted, var(--mi-surface-hover, oklch(0.965 0.004 250)));
+  --mi-color-muted-foreground-resolved: var(--mi-color-muted-foreground, var(--mi-muted, oklch(0.52 0.02 258)));
+  --mi-color-accent-resolved: var(--mi-color-sidebar-accent, var(--mi-color-muted, var(--mi-surface-hover, oklch(0.955 0.017 258))));
+  --mi-color-accent-foreground-resolved: var(--mi-color-sidebar-accent-foreground, oklch(0.45 0.16 263));
+  --mi-color-destructive-resolved: var(--mi-color-destructive, oklch(0.577 0.245 27.325));
+  --mi-color-border-resolved: var(--mi-color-border, var(--mi-border, oklch(0.922 0.004 258)));
+  --mi-color-input-resolved: var(--mi-color-input, var(--mi-color-border, var(--mi-border, oklch(0.922 0.004 258))));
+  --mi-color-ring-resolved: var(--mi-color-ring, var(--mi-color-primary, var(--mi-primary, oklch(0.55 0.215 263))));
+  --mi-color-sidebar-resolved: var(--mi-color-sidebar, oklch(0.982 0.003 255));
+  --mi-color-sidebar-foreground-resolved: var(--mi-color-sidebar-foreground, oklch(0.35 0.02 260));
+  --mi-color-sidebar-border-resolved: var(--mi-color-sidebar-border, var(--mi-color-border, var(--mi-border, oklch(0.922 0.004 258))));
+  --mi-color-success-resolved: var(--mi-color-success, oklch(0.45 0.1 155));
+  --mi-color-warning-resolved: var(--mi-color-warning, oklch(0.48 0.12 65));
+  --mi-color-error-resolved: var(--mi-color-error, oklch(0.5 0.16 25));
+  --mi-color-star-resolved: var(--mi-color-star, oklch(0.72 0.16 78));
+  --mi-color-shadow-resolved: var(--mi-color-shadow, oklch(0.18 0.025 260 / 18%));
+  --mi-font-family-resolved: var(--mi-font-family, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  --mi-font-size-ui-resolved: var(--mi-font-size-ui, 12px);
+  --mi-font-size-meta-resolved: var(--mi-font-size-meta, 10.5px);
+  --mi-font-size-body-resolved: var(--mi-font-size-body, 14px);
+  --mi-radius-resolved: var(--mi-radius, 15px);
+  font-family: var(--mi-font-family-resolved);
+  font-size: var(--mi-font-size-ui-resolved);
 }
 
 .mail-inlay *,
@@ -34,8 +44,18 @@
 .mail-inlay button,
 .mail-inlay input,
 .compose-layer button,
-.compose-layer input {
+.compose-layer input,
+.compose-layer textarea {
   font: inherit;
+}
+
+.mail-inlay button:focus-visible,
+.mail-inlay input:focus-visible,
+.compose-layer button:focus-visible,
+.compose-layer input:focus-visible,
+.compose-layer textarea:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--mi-color-ring-resolved) 62%, transparent);
+  outline-offset: 2px;
 }
 
 .mail-inlay button,
@@ -48,18 +68,20 @@
   container-name: mail;
   position: relative;
   display: flex;
+  width: 100%;
+  height: 100%;
   min-width: 0;
   min-height: 0;
   flex: 1;
   flex-direction: column;
   overflow: hidden;
-  color: var(--foreground);
-  background: var(--background);
-  border: 1px solid #dfe4ec;
-  border-radius: var(--mi-radius, 15px);
+  color: var(--mi-color-foreground-resolved);
+  background: var(--mi-color-background-resolved);
+  border: 1px solid var(--mi-color-border-resolved);
+  border-radius: var(--mi-radius-resolved);
   box-shadow:
-    0 1px 2px rgb(20 32 55 / 4%),
-    0 12px 32px rgb(20 32 55 / 7%);
+    0 1px 2px color-mix(in oklab, var(--mi-color-shadow-resolved) 25%, transparent),
+    0 12px 32px color-mix(in oklab, var(--mi-color-shadow-resolved) 42%, transparent);
 }
 
 .mail-inlay__topbar {
@@ -71,8 +93,8 @@
   justify-content: space-between;
   gap: 16px;
   padding: 0 12px;
-  background: color-mix(in oklab, var(--card) 96%, var(--background));
-  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklab, var(--mi-color-card-resolved) 96%, var(--mi-color-background-resolved));
+  border-bottom: 1px solid var(--mi-color-border-resolved);
 }
 
 .mail-inlay__identity,
@@ -92,13 +114,13 @@
   height: 29px;
   flex: 0 0 29px;
   place-items: center;
-  color: white;
-  background: #3568ea;
+  color: var(--mi-color-primary-foreground-resolved);
+  background: var(--mi-color-primary-resolved);
   border-radius: 9px;
-  font-size: 9px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 750;
   letter-spacing: -0.02em;
-  box-shadow: 0 5px 14px rgb(53 104 234 / 23%);
+  box-shadow: 0 5px 14px color-mix(in oklab, var(--mi-color-primary-resolved) 25%, transparent);
 }
 
 .mail-inlay__identity > div {
@@ -109,14 +131,14 @@
 }
 
 .mail-inlay__identity strong {
-  font-size: 12px;
+  font-size: var(--mi-font-size-ui-resolved);
   font-weight: 680;
 }
 
 .mail-inlay__identity span:not(.mail-inlay__mark) {
   margin-top: 3px;
-  color: var(--muted-foreground);
-  font-size: 9px;
+  color: var(--mi-color-muted-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
 }
 
 .mail-inlay__status {
@@ -129,11 +151,11 @@
   align-items: center;
   gap: 6px;
   padding: 0 9px;
-  color: #39725b;
-  background: #edf8f2;
-  border: 1px solid #d7eee2;
+  color: var(--mi-color-success-resolved);
+  background: color-mix(in oklab, var(--mi-color-success-resolved) 9%, var(--mi-color-card-resolved));
+  border: 1px solid color-mix(in oklab, var(--mi-color-success-resolved) 20%, var(--mi-color-border-resolved));
   border-radius: 999px;
-  font-size: 9px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 600;
 }
 
@@ -148,11 +170,11 @@
   align-items: center;
   gap: 6px;
   padding: 0 10px;
-  color: white;
-  background: #3568ea;
+  color: var(--mi-color-primary-foreground-resolved);
+  background: var(--mi-color-primary-resolved);
   border: 0;
   border-radius: 8px;
-  font-size: 10px;
+  font-size: var(--mi-font-size-ui-resolved);
   font-weight: 650;
 }
 
@@ -167,16 +189,16 @@
   align-items: center;
   gap: 6px;
   padding: 0 10px;
-  color: var(--foreground);
-  background: var(--card);
-  border: 1px solid var(--border);
+  color: var(--mi-color-foreground-resolved);
+  background: var(--mi-color-card-resolved);
+  border: 1px solid var(--mi-color-border-resolved);
   border-radius: 8px;
-  font-size: 9px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 650;
 }
 
 .mail-check-button:hover {
-  background: var(--muted);
+  background: var(--mi-color-muted-resolved);
 }
 
 .mail-check-button:disabled {
@@ -187,7 +209,7 @@
 .mail-check-button svg {
   width: 13px;
   height: 13px;
-  color: var(--primary);
+  color: var(--mi-color-primary-resolved);
 }
 
 .mail-folder-trigger {
@@ -195,8 +217,8 @@
   width: 30px;
   height: 30px;
   place-items: center;
-  color: var(--muted-foreground);
-  background: var(--muted);
+  color: var(--mi-color-muted-foreground-resolved);
+  background: var(--mi-color-muted-resolved);
   border: 0;
   border-radius: 8px;
 }
@@ -214,6 +236,11 @@
   flex: 1;
   grid-template-columns: 202px 342px minmax(0, 1fr);
   overflow: hidden;
+  transition: grid-template-columns 180ms ease;
+}
+
+.mail-inlay.is-folders-collapsed .mail-inlay__body {
+  grid-template-columns: 62px 342px minmax(0, 1fr);
 }
 
 .mail-folders-pane,
@@ -225,11 +252,11 @@
 }
 
 .mail-folders-pane {
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--mi-color-border-resolved);
 }
 
 .mail-list-pane {
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--mi-color-border-resolved);
 }
 
 .mail-folder-sidebar {
@@ -238,7 +265,7 @@
   height: 100%;
   flex-direction: column;
   overflow: hidden;
-  background: var(--sidebar);
+  background: var(--mi-color-sidebar-resolved);
 }
 
 .mail-account {
@@ -248,14 +275,14 @@
   gap: 9px;
   margin: 0;
   padding: 9px 11px;
-  color: var(--sidebar-foreground);
+  color: var(--mi-color-sidebar-foreground-resolved);
   background: transparent;
   border: 0;
   text-align: left;
 }
 
 .mail-account:hover {
-  background: color-mix(in oklab, var(--sidebar-accent) 55%, transparent);
+  background: color-mix(in oklab, var(--mi-color-accent-resolved) 55%, transparent);
 }
 
 .mail-account__avatar {
@@ -264,10 +291,10 @@
   height: 30px;
   flex: 0 0 30px;
   place-items: center;
-  color: #244fb7;
-  background: #dce7ff;
+  color: var(--mi-color-primary-resolved);
+  background: var(--mi-color-accent-resolved);
   border-radius: 9px;
-  font-size: 9px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 750;
 }
 
@@ -287,21 +314,21 @@
 }
 
 .mail-account__copy strong {
-  font-size: 11px;
+  font-size: var(--mi-font-size-ui-resolved);
   font-weight: 650;
 }
 
 .mail-account__copy small {
   margin-top: 4px;
-  color: var(--muted-foreground);
-  font-size: 9px;
+  color: var(--mi-color-muted-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
 }
 
 .mail-account__chevron {
   width: 13px;
   height: 13px;
   flex: 0 0 13px;
-  color: var(--muted-foreground);
+  color: var(--mi-color-muted-foreground-resolved);
 }
 
 .mail-compose-wrap {
@@ -315,17 +342,17 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  color: white;
-  background: #3568ea;
+  color: var(--mi-color-primary-foreground-resolved);
+  background: var(--mi-color-primary-resolved);
   border: 0;
   border-radius: 9px;
-  font-size: 10px;
+  font-size: var(--mi-font-size-ui-resolved);
   font-weight: 650;
-  box-shadow: 0 6px 14px rgb(53 104 234 / 18%);
+  box-shadow: 0 6px 14px color-mix(in oklab, var(--mi-color-primary-resolved) 20%, transparent);
 }
 
 .mail-compose-button:hover {
-  background: #2d5bd0;
+  background: color-mix(in oklab, var(--mi-color-primary-resolved) 86%, var(--mi-color-foreground-resolved));
 }
 
 .mail-compose-button svg {
@@ -342,8 +369,8 @@
 
 .mail-folder-nav > p {
   margin: 9px 9px 5px;
-  color: var(--muted-foreground);
-  font-size: 8px;
+  color: var(--mi-color-muted-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -365,21 +392,21 @@
   align-items: center;
   gap: 9px;
   padding: 0 9px;
-  color: var(--sidebar-foreground);
+  color: var(--mi-color-sidebar-foreground-resolved);
   background: transparent;
   border: 0;
   border-radius: 8px;
-  font-size: 10px;
+  font-size: var(--mi-font-size-ui-resolved);
   text-align: left;
 }
 
 .mail-folder-nav li button:hover {
-  background: color-mix(in oklab, var(--sidebar-accent) 55%, transparent);
+  background: color-mix(in oklab, var(--mi-color-accent-resolved) 55%, transparent);
 }
 
 .mail-folder-nav li button.is-active {
-  color: var(--sidebar-accent-foreground);
-  background: var(--sidebar-accent);
+  color: var(--mi-color-accent-foreground-resolved);
+  background: var(--mi-color-accent-resolved);
   font-weight: 650;
 }
 
@@ -387,11 +414,11 @@
   width: 14px;
   height: 14px;
   flex: 0 0 14px;
-  color: var(--muted-foreground);
+  color: var(--mi-color-muted-foreground-resolved);
 }
 
 .mail-folder-nav li button.is-active svg {
-  color: var(--primary);
+  color: var(--mi-color-primary-resolved);
 }
 
 .mail-folder-nav li button span {
@@ -407,29 +434,29 @@
   height: 18px;
   place-items: center;
   padding: 0 5px;
-  color: var(--muted-foreground);
-  background: var(--muted);
+  color: var(--mi-color-muted-foreground-resolved);
+  background: var(--mi-color-muted-resolved);
   border-radius: 999px;
-  font-size: 8px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 700;
 }
 
 .mail-folder-nav li button.is-active b {
-  color: white;
-  background: var(--primary);
+  color: var(--mi-color-primary-foreground-resolved);
+  background: var(--mi-color-primary-resolved);
 }
 
 .mail-folder-footer {
   padding: 10px;
-  border-top: 1px solid var(--sidebar-border);
+  border-top: 1px solid var(--mi-color-sidebar-border-resolved);
 }
 
 .mail-storage > span {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: var(--muted-foreground);
-  font-size: 8px;
+  color: var(--mi-color-muted-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
 }
 
 .mail-storage > span b {
@@ -441,34 +468,34 @@
   height: 4px;
   margin-top: 6px;
   overflow: hidden;
-  background: var(--muted);
+  background: var(--mi-color-muted-resolved);
   border-radius: 999px;
 }
 
 .mail-storage > i span {
   display: block;
   height: 100%;
-  background: var(--primary);
+  background: var(--mi-color-primary-resolved);
   border-radius: inherit;
 }
 
 .mail-settings-button {
   display: flex;
-  width: 100%;
   height: 30px;
   align-items: center;
-  gap: 8px;
-  margin-top: 7px;
-  padding: 0 4px;
-  color: var(--muted-foreground);
-  background: transparent;
-  border: 0;
-  border-radius: 7px;
-  font-size: 9px;
+  gap: 6px;
+  padding: 0 9px;
+  color: var(--mi-color-muted-foreground-resolved);
+  background: var(--mi-color-card-resolved);
+  border: 1px solid var(--mi-color-border-resolved);
+  border-radius: 8px;
+  font-size: var(--mi-font-size-ui-resolved);
+  font-weight: 650;
 }
 
 .mail-settings-button:hover {
-  color: var(--foreground);
+  color: var(--mi-color-foreground-resolved);
+  background: var(--mi-color-muted-resolved);
 }
 
 .mail-settings-button svg {
@@ -476,17 +503,95 @@
   height: 13px;
 }
 
+.mail-folders-collapse {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 9px;
+  margin: 0 9px 8px;
+  padding: 0 9px;
+  color: var(--mi-color-muted-foreground-resolved);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  font-size: var(--mi-font-size-ui-resolved);
+  text-align: left;
+}
+
+.mail-folders-collapse:hover {
+  color: var(--mi-color-foreground-resolved);
+  background: color-mix(in oklab, var(--mi-color-accent-resolved) 55%, transparent);
+}
+
+.mail-folders-collapse svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+}
+
+.mail-folder-sidebar.is-collapsed .mail-account {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.mail-folder-sidebar.is-collapsed .mail-account__copy,
+.mail-folder-sidebar.is-collapsed .mail-compose-button span,
+.mail-folder-sidebar.is-collapsed .mail-folder-nav > p,
+.mail-folder-sidebar.is-collapsed .mail-folder-nav li button span,
+.mail-folder-sidebar.is-collapsed .mail-storage,
+.mail-folder-sidebar.is-collapsed .mail-folders-collapse span {
+  display: none;
+}
+
+.mail-folder-sidebar.is-collapsed .mail-compose-wrap {
+  padding-inline: 10px;
+}
+
+.mail-folder-sidebar.is-collapsed .mail-compose-button {
+  width: 36px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.mail-folder-sidebar.is-collapsed .mail-folder-nav {
+  padding-inline: 9px;
+}
+
+.mail-folder-sidebar.is-collapsed .mail-folder-nav li button {
+  position: relative;
+  justify-content: center;
+  padding: 0;
+}
+
+.mail-folder-sidebar.is-collapsed .mail-folder-nav li button b {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+}
+
+.mail-folder-sidebar.is-collapsed .mail-folders-collapse {
+  justify-content: center;
+  padding: 0;
+}
+
+.mail-folder-sidebar.is-collapsed .mail-folder-footer {
+  display: none;
+}
+
 .message-list {
   display: flex;
   width: 100%;
   height: 100%;
   flex-direction: column;
-  background: var(--card);
+  background: var(--mi-color-card-resolved);
 }
 
 .message-list__header {
   padding: 12px 12px 10px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--mi-color-border-resolved);
 }
 
 .message-list__title-row {
@@ -505,7 +610,7 @@
 
 .message-list__title-row h1 {
   margin: 0;
-  color: var(--foreground);
+  color: var(--mi-color-foreground-resolved);
   font-size: 15px;
   font-weight: 680;
   letter-spacing: -0.02em;
@@ -513,8 +618,8 @@
 
 .message-list__title-row span {
   overflow: hidden;
-  color: var(--muted-foreground);
-  font-size: 8px;
+  color: var(--mi-color-muted-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -530,7 +635,7 @@
   width: 28px;
   height: 28px;
   place-items: center;
-  color: var(--muted-foreground);
+  color: var(--mi-color-muted-foreground-resolved);
   background: transparent;
   border: 0;
   border-radius: 7px;
@@ -539,12 +644,12 @@
 .message-list__actions button:hover,
 .message-list__actions button.is-active,
 .message-search button:hover {
-  color: var(--foreground);
-  background: var(--muted);
+  color: var(--mi-color-foreground-resolved);
+  background: var(--mi-color-muted-resolved);
 }
 
 .message-list__actions button.is-active {
-  color: var(--primary);
+  color: var(--mi-color-primary-resolved);
 }
 
 .message-list__actions svg,
@@ -561,9 +666,9 @@
   gap: 7px;
   margin-top: 9px;
   padding: 0 8px;
-  color: var(--muted-foreground);
-  background: var(--background);
-  border: 1px solid var(--input);
+  color: var(--mi-color-muted-foreground-resolved);
+  background: var(--mi-color-background-resolved);
+  border: 1px solid var(--mi-color-input-resolved);
   border-radius: 8px;
 }
 
@@ -577,15 +682,15 @@
   min-width: 0;
   height: 100%;
   flex: 1;
-  color: var(--foreground);
+  color: var(--mi-color-foreground-resolved);
   background: transparent;
   border: 0;
   outline: 0;
-  font-size: 10px;
+  font-size: var(--mi-font-size-ui-resolved);
 }
 
 .message-search input::placeholder {
-  color: var(--muted-foreground);
+  color: var(--mi-color-muted-foreground-resolved);
 }
 
 .message-search button {
@@ -596,12 +701,12 @@
 
 .message-search kbd {
   padding: 2px 4px;
-  color: var(--muted-foreground);
-  background: var(--card);
-  border: 1px solid var(--border);
+  color: var(--mi-color-muted-foreground-resolved);
+  background: var(--mi-color-card-resolved);
+  border: 1px solid var(--mi-color-border-resolved);
   border-radius: 4px;
   font-family: inherit;
-  font-size: 8px;
+  font-size: var(--mi-font-size-meta-resolved);
 }
 
 .message-filter-chip {
@@ -611,11 +716,11 @@
   gap: 4px;
   margin-top: 7px;
   padding: 0 7px;
-  color: var(--primary);
-  background: color-mix(in oklab, var(--accent) 78%, var(--card));
-  border: 1px solid color-mix(in oklab, var(--primary) 16%, transparent);
+  color: var(--mi-color-primary-resolved);
+  background: color-mix(in oklab, var(--mi-color-accent-resolved) 78%, var(--mi-color-card-resolved));
+  border: 1px solid color-mix(in oklab, var(--mi-color-primary-resolved) 16%, transparent);
   border-radius: 999px;
-  font-size: 8px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 650;
 }
 
@@ -643,19 +748,19 @@
   width: 100%;
   min-height: 78px;
   align-items: stretch;
-  color: var(--foreground);
+  color: var(--mi-color-foreground-resolved);
   background: transparent;
-  border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--mi-color-border-resolved) 70%, transparent);
   text-align: left;
   transition: background 150ms ease;
 }
 
 .message-row:hover {
-  background: color-mix(in oklab, var(--muted) 62%, transparent);
+  background: color-mix(in oklab, var(--mi-color-muted-resolved) 62%, transparent);
 }
 
 .message-row.is-active {
-  background: color-mix(in oklab, var(--accent) 72%, var(--card));
+  background: color-mix(in oklab, var(--mi-color-accent-resolved) 72%, var(--mi-color-card-resolved));
 }
 
 .message-row.is-active::before {
@@ -665,7 +770,7 @@
   left: 0;
   width: 2px;
   content: "";
-  background: var(--primary);
+  background: var(--mi-color-primary-resolved);
   border-radius: 0 999px 999px 0;
 }
 
@@ -688,9 +793,10 @@
   height: 30px;
   flex: 0 0 30px;
   place-items: center;
-  color: white;
+  color: var(--mi-color-primary-foreground-resolved);
+  background: var(--mi-color-primary-resolved);
   border-radius: 9px;
-  font-size: 8px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 750;
 }
 
@@ -700,8 +806,8 @@
   right: -2px;
   width: 7px;
   height: 7px;
-  background: var(--primary);
-  border: 1.5px solid var(--card);
+  background: var(--mi-color-primary-resolved);
+  border: 1.5px solid var(--mi-color-card-resolved);
   border-radius: 999px;
 }
 
@@ -731,7 +837,7 @@
 
 .message-row__sender strong {
   min-width: 0;
-  font-size: 10px;
+  font-size: var(--mi-font-size-ui-resolved);
   font-weight: 560;
 }
 
@@ -742,20 +848,20 @@
 
 .message-row__sender time {
   flex: 0 0 auto;
-  color: var(--muted-foreground);
-  font-size: 8px;
+  color: var(--mi-color-muted-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
 }
 
 .message-row__subject {
   margin-top: 3px;
-  font-size: 10px;
+  font-size: var(--mi-font-size-ui-resolved);
   font-weight: 560;
 }
 
 .message-row__preview {
   margin-top: 3px;
-  color: var(--muted-foreground);
-  font-size: 8px;
+  color: var(--mi-color-muted-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
   line-height: 1.35;
 }
 
@@ -767,7 +873,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 9px 6px 9px 0;
-  color: var(--muted-foreground);
+  color: var(--mi-color-muted-foreground-resolved);
 }
 
 .message-row__meta button {
@@ -782,8 +888,8 @@
 }
 
 .message-row__meta button:hover {
-  color: var(--foreground);
-  background: var(--muted);
+  color: var(--mi-color-foreground-resolved);
+  background: var(--mi-color-muted-resolved);
 }
 
 .message-row__meta svg {
@@ -792,8 +898,8 @@
 }
 
 .is-starred {
-  color: #e8a72c !important;
-  fill: #f5ba48;
+  color: var(--mi-color-star-resolved) !important;
+  fill: var(--mi-color-star-resolved);
 }
 
 .message-empty,
@@ -813,8 +919,8 @@
   width: 44px;
   height: 44px;
   place-items: center;
-  color: var(--muted-foreground);
-  background: var(--muted);
+  color: var(--mi-color-muted-foreground-resolved);
+  background: var(--mi-color-muted-resolved);
   border-radius: 14px;
 }
 
@@ -827,15 +933,15 @@
 .message-empty strong,
 .message-reader-empty strong {
   margin-top: 10px;
-  font-size: 11px;
+  font-size: var(--mi-font-size-ui-resolved);
 }
 
 .message-empty p,
 .message-reader-empty p {
   max-width: 230px;
   margin: 5px 0 0;
-  color: var(--muted-foreground);
-  font-size: 9px;
+  color: var(--mi-color-muted-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
   line-height: 1.5;
 }
 
@@ -843,11 +949,11 @@
   height: 28px;
   margin-top: 11px;
   padding: 0 10px;
-  color: var(--primary);
-  background: color-mix(in oklab, var(--accent) 72%, var(--card));
+  color: var(--mi-color-primary-resolved);
+  background: color-mix(in oklab, var(--mi-color-accent-resolved) 72%, var(--mi-color-card-resolved));
   border: 0;
   border-radius: 7px;
-  font-size: 9px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 650;
 }
 
@@ -855,7 +961,7 @@
 .message-reader-empty {
   width: 100%;
   height: 100%;
-  background: var(--background);
+  background: var(--mi-color-background-resolved);
 }
 
 .message-reader {
@@ -872,8 +978,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 11px;
-  background: color-mix(in oklab, var(--background) 94%, var(--card));
-  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklab, var(--mi-color-background-resolved) 94%, var(--mi-color-card-resolved));
+  border-bottom: 1px solid var(--mi-color-border-resolved);
 }
 
 .message-reader__toolbar > div {
@@ -887,15 +993,15 @@
   width: 30px;
   height: 30px;
   place-items: center;
-  color: var(--muted-foreground);
+  color: var(--mi-color-muted-foreground-resolved);
   background: transparent;
   border: 0;
   border-radius: 8px;
 }
 
 .message-reader__toolbar button:hover {
-  color: var(--foreground);
-  background: var(--muted);
+  color: var(--mi-color-foreground-resolved);
+  background: var(--mi-color-muted-resolved);
 }
 
 .message-reader__toolbar button svg {
@@ -919,10 +1025,10 @@
   display: block !important;
   width: 190px;
   padding: 5px;
-  background: var(--popover);
-  border: 1px solid var(--border);
+  background: var(--mi-color-popover-resolved);
+  border: 1px solid var(--mi-color-border-resolved);
   border-radius: 10px;
-  box-shadow: 0 12px 28px rgb(20 30 50 / 14%);
+  box-shadow: 0 12px 28px var(--mi-color-shadow-resolved);
 }
 
 .reader-more__menu button {
@@ -933,8 +1039,8 @@
   justify-content: flex-start;
   gap: 8px;
   padding: 0 8px;
-  color: var(--foreground);
-  font-size: 9px;
+  color: var(--mi-color-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
   white-space: nowrap;
 }
 
@@ -960,7 +1066,7 @@
 
 .message-reader__subject h2 {
   margin: 0;
-  color: var(--foreground);
+  color: var(--mi-color-foreground-resolved);
   font-size: clamp(16px, 1.7cqw, 21px);
   font-weight: 680;
   line-height: 1.25;
@@ -970,10 +1076,10 @@
 .message-reader__subject > span {
   flex: 0 0 auto;
   padding: 4px 7px;
-  color: var(--muted-foreground);
-  background: var(--muted);
+  color: var(--mi-color-muted-foreground-resolved);
+  background: var(--mi-color-muted-resolved);
   border-radius: 999px;
-  font-size: 8px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 600;
 }
 
@@ -990,9 +1096,10 @@
   height: 34px;
   flex: 0 0 34px;
   place-items: center;
-  color: white;
+  color: var(--mi-color-primary-foreground-resolved);
+  background: var(--mi-color-primary-resolved);
   border-radius: 10px;
-  font-size: 9px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 750;
 }
 
@@ -1007,7 +1114,7 @@
   align-items: baseline;
   gap: 5px;
   margin: 0;
-  font-size: 10px;
+  font-size: var(--mi-font-size-ui-resolved);
 }
 
 .message-sender p strong {
@@ -1017,18 +1124,18 @@
 .message-sender p span,
 .message-sender small,
 .message-sender time {
-  color: var(--muted-foreground);
+  color: var(--mi-color-muted-foreground-resolved);
 }
 
 .message-sender p span {
-  font-size: 9px;
+  font-size: var(--mi-font-size-meta-resolved);
 }
 
 .message-sender small {
   display: block;
   overflow: hidden;
   margin-top: 3px;
-  font-size: 8px;
+  font-size: var(--mi-font-size-meta-resolved);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1036,7 +1143,7 @@
 .message-sender time {
   max-width: 130px;
   flex: 0 0 auto;
-  font-size: 8px;
+  font-size: var(--mi-font-size-meta-resolved);
   line-height: 1.35;
   text-align: right;
 }
@@ -1048,11 +1155,11 @@
   gap: 7px;
   margin-top: 15px;
   padding: 6px 9px;
-  color: var(--muted-foreground);
-  background: color-mix(in oklab, var(--muted) 55%, var(--card));
-  border: 1px solid var(--border);
+  color: var(--mi-color-muted-foreground-resolved);
+  background: color-mix(in oklab, var(--mi-color-muted-resolved) 55%, var(--mi-color-card-resolved));
+  border: 1px solid var(--mi-color-border-resolved);
   border-radius: 8px;
-  font-size: 8px;
+  font-size: var(--mi-font-size-meta-resolved);
 }
 
 .blocked-images > svg {
@@ -1070,22 +1177,22 @@
   height: 22px;
   flex: 0 0 auto;
   padding: 0 7px;
-  color: var(--primary);
+  color: var(--mi-color-primary-resolved);
   background: transparent;
   border: 0;
   border-radius: 6px;
-  font-size: 8px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 650;
 }
 
 .blocked-images button:hover {
-  background: color-mix(in oklab, var(--accent) 70%, transparent);
+  background: color-mix(in oklab, var(--mi-color-accent-resolved) 70%, transparent);
 }
 
 .message-body {
   margin-top: 19px;
-  color: color-mix(in oklab, var(--foreground) 90%, transparent);
-  font-size: 10px;
+  color: color-mix(in oklab, var(--mi-color-foreground-resolved) 90%, transparent);
+  font-size: var(--mi-font-size-body-resolved);
   line-height: 1.68;
 }
 
@@ -1102,8 +1209,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--muted-foreground);
-  font-size: 8px;
+  color: var(--mi-color-muted-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1127,13 +1234,13 @@
   align-items: center;
   gap: 8px;
   padding: 8px;
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: var(--mi-color-card-resolved);
+  border: 1px solid var(--mi-color-border-resolved);
   border-radius: 9px;
 }
 
 .attachment-card:hover {
-  border-color: color-mix(in oklab, var(--primary) 34%, var(--border));
+  border-color: color-mix(in oklab, var(--mi-color-primary-resolved) 34%, var(--mi-color-border-resolved));
 }
 
 .attachment-card > span {
@@ -1142,8 +1249,8 @@
   height: 30px;
   flex: 0 0 30px;
   place-items: center;
-  color: var(--muted-foreground);
-  background: var(--muted);
+  color: var(--mi-color-muted-foreground-resolved);
+  background: var(--mi-color-muted-resolved);
   border-radius: 8px;
 }
 
@@ -1161,7 +1268,7 @@
 
 .attachment-card strong {
   overflow: hidden;
-  font-size: 9px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1169,8 +1276,8 @@
 
 .attachment-card small {
   margin-top: 3px;
-  color: var(--muted-foreground);
-  font-size: 8px;
+  color: var(--mi-color-muted-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
 }
 
 .attachment-card button {
@@ -1179,15 +1286,15 @@
   height: 27px;
   flex: 0 0 27px;
   place-items: center;
-  color: var(--muted-foreground);
+  color: var(--mi-color-muted-foreground-resolved);
   background: transparent;
   border: 0;
   border-radius: 7px;
 }
 
 .attachment-card button:hover {
-  color: var(--foreground);
-  background: var(--muted);
+  color: var(--mi-color-foreground-resolved);
+  background: var(--mi-color-muted-resolved);
 }
 
 .attachment-card button svg {
@@ -1201,8 +1308,8 @@
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  background: color-mix(in oklab, var(--background) 94%, var(--card));
-  border-top: 1px solid var(--border);
+  background: color-mix(in oklab, var(--mi-color-background-resolved) 94%, var(--mi-color-card-resolved));
+  border-top: 1px solid var(--mi-color-border-resolved);
 }
 
 .message-reply-bar button {
@@ -1211,16 +1318,16 @@
   align-items: center;
   gap: 6px;
   padding: 0 10px;
-  color: var(--foreground);
-  background: var(--card);
-  border: 1px solid var(--border);
+  color: var(--mi-color-foreground-resolved);
+  background: var(--mi-color-card-resolved);
+  border: 1px solid var(--mi-color-border-resolved);
   border-radius: 8px;
-  font-size: 9px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 620;
 }
 
 .message-reply-bar button:hover {
-  background: var(--muted);
+  background: var(--mi-color-muted-resolved);
 }
 
 .message-reply-bar svg {
@@ -1239,7 +1346,7 @@
 .compose-layer__scrim {
   position: absolute;
   inset: 0;
-  background: rgb(20 28 46 / 30%);
+  background: color-mix(in oklab, var(--mi-color-shadow-resolved) 72%, transparent);
   border: 0;
   backdrop-filter: blur(2px);
 }
@@ -1249,9 +1356,9 @@
   inset: 0 auto 0 0;
   width: min(260px, 84%);
   overflow: hidden;
-  background: var(--sidebar);
-  border-right: 1px solid var(--border);
-  box-shadow: 18px 0 38px rgb(20 28 46 / 18%);
+  background: var(--mi-color-sidebar-resolved);
+  border-right: 1px solid var(--mi-color-border-resolved);
+  box-shadow: 18px 0 38px var(--mi-color-shadow-resolved);
 }
 
 .mail-drawer__close {
@@ -1263,8 +1370,8 @@
   width: 28px;
   height: 28px;
   place-items: center;
-  color: var(--muted-foreground);
-  background: var(--muted);
+  color: var(--mi-color-muted-foreground-resolved);
+  background: var(--mi-color-muted-resolved);
   border: 0;
   border-radius: 8px;
 }
@@ -1291,10 +1398,10 @@
   flex-direction: column;
   overflow: hidden;
   transform: translate(-50%, -50%);
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: var(--mi-color-card-resolved);
+  border: 1px solid var(--mi-color-border-resolved);
   border-radius: 14px;
-  box-shadow: 0 22px 56px rgb(20 28 46 / 26%);
+  box-shadow: 0 22px 56px var(--mi-color-shadow-resolved);
 }
 
 .compose-sheet > header {
@@ -1304,8 +1411,8 @@
   justify-content: space-between;
   gap: 12px;
   padding: 0 12px;
-  background: color-mix(in oklab, var(--muted) 45%, var(--card));
-  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklab, var(--mi-color-muted-resolved) 45%, var(--mi-color-card-resolved));
+  border-bottom: 1px solid var(--mi-color-border-resolved);
 }
 
 .compose-sheet > header > div {
@@ -1319,10 +1426,10 @@
   width: 29px;
   height: 29px;
   place-items: center;
-  color: white;
-  background: #3568ea;
+  color: var(--mi-color-primary-foreground-resolved);
+  background: var(--mi-color-primary-resolved);
   border-radius: 8px;
-  font-size: 8px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 750;
 }
 
@@ -1332,14 +1439,14 @@
 }
 
 .compose-sheet h2 {
-  font-size: 11px;
+  font-size: var(--mi-font-size-ui-resolved);
   font-weight: 680;
 }
 
 .compose-sheet header p {
   margin-top: 3px;
-  color: var(--muted-foreground);
-  font-size: 8px;
+  color: var(--mi-color-muted-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
 }
 
 .compose-sheet > header > button {
@@ -1347,15 +1454,15 @@
   width: 29px;
   height: 29px;
   place-items: center;
-  color: var(--muted-foreground);
+  color: var(--mi-color-muted-foreground-resolved);
   background: transparent;
   border: 0;
   border-radius: 8px;
 }
 
 .compose-sheet > header > button:hover {
-  color: var(--foreground);
-  background: var(--muted);
+  color: var(--mi-color-foreground-resolved);
+  background: var(--mi-color-muted-resolved);
 }
 
 .compose-sheet > header svg {
@@ -1374,41 +1481,41 @@
   align-items: center;
   gap: 8px;
   padding: 0 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--mi-color-border-resolved);
 }
 
 .compose-fields label > span {
   width: 38px;
   flex: 0 0 38px;
-  color: var(--muted-foreground);
-  font-size: 9px;
+  color: var(--mi-color-muted-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
 }
 
 .compose-fields input {
   min-width: 0;
   height: 34px;
   flex: 1;
-  color: var(--foreground);
+  color: var(--mi-color-foreground-resolved);
   background: transparent;
   border: 0;
   outline: 0;
-  font-size: 10px;
+  font-size: var(--mi-font-size-ui-resolved);
 }
 
 .compose-fields input::placeholder {
-  color: var(--muted-foreground);
+  color: var(--mi-color-muted-foreground-resolved);
 }
 
 .compose-fields input[aria-invalid="true"] {
-  color: var(--destructive);
+  color: var(--mi-color-destructive-resolved);
 }
 
 .compose-fields label button {
   flex: 0 0 auto;
-  color: var(--muted-foreground);
+  color: var(--mi-color-muted-foreground-resolved);
   background: transparent;
   border: 0;
-  font-size: 8px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 620;
 }
 
@@ -1418,7 +1525,7 @@
   align-items: center;
   gap: 1px;
   padding: 4px 10px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--mi-color-border-resolved);
 }
 
 .compose-tools button {
@@ -1426,15 +1533,16 @@
   width: 27px;
   height: 27px;
   place-items: center;
-  color: var(--muted-foreground);
+  color: var(--mi-color-muted-foreground-resolved);
   background: transparent;
   border: 0;
   border-radius: 6px;
 }
 
-.compose-tools button:hover {
-  color: var(--foreground);
-  background: var(--muted);
+.compose-tools button:hover,
+.compose-tools button.is-active {
+  color: var(--mi-color-primary-resolved);
+  background: var(--mi-color-accent-resolved);
 }
 
 .compose-tools svg {
@@ -1447,33 +1555,33 @@
   flex: 1;
   resize: none;
   padding: 12px;
-  color: var(--foreground);
-  background: var(--card);
+  color: var(--mi-color-foreground-resolved);
+  background: var(--mi-color-card-resolved);
   border: 0;
   outline: 0;
-  font-size: 10px;
+  font-size: var(--mi-font-size-ui-resolved);
   line-height: 1.6;
 }
 
 .compose-sheet > textarea::placeholder {
-  color: var(--muted-foreground);
+  color: var(--mi-color-muted-foreground-resolved);
 }
 
 .compose-signature {
   display: flex;
   flex-direction: column;
   padding: 0 12px 10px;
-  color: var(--muted-foreground);
-  font-size: 8px;
+  color: var(--mi-color-muted-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
   line-height: 1.5;
 }
 
 .compose-error {
   padding: 7px 12px;
-  color: var(--destructive);
-  background: color-mix(in oklab, var(--destructive) 7%, var(--card));
-  border-top: 1px solid color-mix(in oklab, var(--destructive) 16%, var(--border));
-  font-size: 8px;
+  color: var(--mi-color-destructive-resolved);
+  background: color-mix(in oklab, var(--mi-color-destructive-resolved) 7%, var(--mi-color-card-resolved));
+  border-top: 1px solid color-mix(in oklab, var(--mi-color-destructive-resolved) 16%, var(--mi-color-border-resolved));
+  font-size: var(--mi-font-size-meta-resolved);
 }
 
 .compose-sheet > footer {
@@ -1483,8 +1591,8 @@
   justify-content: space-between;
   gap: 10px;
   padding: 8px 12px;
-  background: color-mix(in oklab, var(--muted) 42%, var(--card));
-  border-top: 1px solid var(--border);
+  background: color-mix(in oklab, var(--mi-color-muted-resolved) 42%, var(--mi-color-card-resolved));
+  border-top: 1px solid var(--mi-color-border-resolved);
 }
 
 .compose-sheet > footer button {
@@ -1495,7 +1603,7 @@
   padding: 0 10px;
   border: 0;
   border-radius: 8px;
-  font-size: 9px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 640;
 }
 
@@ -1506,23 +1614,23 @@
 
 .compose-attachment,
 .compose-discard {
-  color: var(--muted-foreground);
+  color: var(--mi-color-muted-foreground-resolved);
   background: transparent;
 }
 
 .compose-attachment:hover,
 .compose-discard:hover {
-  color: var(--foreground);
-  background: var(--muted);
+  color: var(--mi-color-foreground-resolved);
+  background: var(--mi-color-muted-resolved);
 }
 
 .compose-send {
-  color: white;
-  background: #3568ea;
+  color: var(--mi-color-primary-foreground-resolved);
+  background: var(--mi-color-primary-resolved);
 }
 
 .compose-send:hover {
-  background: #2d5bd0;
+  background: color-mix(in oklab, var(--mi-color-primary-resolved) 86%, var(--mi-color-foreground-resolved));
 }
 
 .compose-sheet > footer svg {
@@ -1540,13 +1648,13 @@
   align-items: center;
   gap: 7px;
   padding: 0 11px;
-  color: #214f3d;
-  background: #eef9f3;
-  border: 1px solid #cfe8dc;
+  color: var(--mi-color-success-resolved);
+  background: color-mix(in oklab, var(--mi-color-success-resolved) 9%, var(--mi-color-card-resolved));
+  border: 1px solid color-mix(in oklab, var(--mi-color-success-resolved) 22%, var(--mi-color-border-resolved));
   border-radius: 9px;
-  font-size: 9px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 620;
-  box-shadow: 0 10px 28px rgb(20 40 32 / 13%);
+  box-shadow: 0 10px 28px var(--mi-color-shadow-resolved);
   animation: toast-in 180ms ease-out;
 }
 
@@ -1574,13 +1682,13 @@
   gap: 8px;
   max-width: calc(100% - 26px);
   padding: 7px 12px;
-  color: #7a3d13;
-  background: #fdf3e8;
-  border: 1px solid #f0d8bd;
+  color: var(--mi-color-warning-resolved);
+  background: color-mix(in oklab, var(--mi-color-warning-resolved) 9%, var(--mi-color-card-resolved));
+  border: 1px solid color-mix(in oklab, var(--mi-color-warning-resolved) 22%, var(--mi-color-border-resolved));
   border-radius: 9px;
-  font-size: 9px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 620;
-  box-shadow: 0 10px 28px rgb(64 40 16 / 13%);
+  box-shadow: 0 10px 28px var(--mi-color-shadow-resolved);
   animation: toast-in 180ms ease-out;
 }
 
@@ -1591,19 +1699,19 @@
 }
 
 .mail-session-expired button {
-  border: 1px solid #eac89f;
-  background: #fff;
-  color: #7a3d13;
+  border: 1px solid color-mix(in oklab, var(--mi-color-warning-resolved) 30%, var(--mi-color-border-resolved));
+  background: var(--mi-color-card-resolved);
+  color: var(--mi-color-warning-resolved);
   border-radius: 7px;
   padding: 4px 9px;
-  font-size: 9px;
+  font-size: var(--mi-font-size-meta-resolved);
   font-weight: 680;
   cursor: pointer;
   white-space: nowrap;
 }
 
 .mail-session-expired button:hover {
-  background: #fbe9d3;
+  background: color-mix(in oklab, var(--mi-color-warning-resolved) 12%, var(--mi-color-card-resolved));
 }
 
 @container mail (max-width: 1120px) and (min-width: 761px) {
@@ -1622,7 +1730,7 @@
   .mail-folder-nav > p,
   .mail-folder-nav li button span,
   .mail-storage,
-  .mail-settings-button span {
+  .mail-folders-collapse span {
     display: none;
   }
 
@@ -1653,16 +1761,15 @@
     min-width: 14px;
     height: 14px;
     padding: 0 3px;
-    font-size: 7px;
+    font-size: var(--mi-font-size-meta-resolved);
   }
 
   .mail-folder-footer {
-    padding-inline: 9px;
+    display: none;
   }
 
-  .mail-settings-button {
-    justify-content: center;
-    margin-top: 0;
+  .mail-folders-collapse {
+    display: none;
   }
 
   .message-reader__content {
@@ -1676,7 +1783,7 @@
 
 @container mail (max-width: 860px) and (min-width: 761px) {
   .mail-inlay__body {
-    grid-template-columns: 58px 292px minmax(0, 1fr);
+    grid-template-columns: 62px 292px minmax(0, 1fr);
   }
 
   .message-reader__content {
@@ -1766,6 +1873,7 @@
   .mail-inlay__identity > div,
   .mail-quick-compose span,
   .mail-check-button span,
+  .mail-settings-button span,
   .message-search kbd {
     display: none;
   }
@@ -1835,11 +1943,11 @@
 .message-load-more button {
   min-height: 30px;
   padding: 0 13px;
-  color: var(--accent-foreground);
-  background: var(--accent);
+  color: var(--mi-color-accent-foreground-resolved);
+  background: var(--mi-color-accent-resolved);
   border: 0;
   border-radius: 8px;
-  font-size: 10px;
+  font-size: var(--mi-font-size-ui-resolved);
   font-weight: 650;
 }
 
@@ -1851,21 +1959,21 @@
 }
 
 .mail-sync-state.is-offline {
-  color: #8b3c42;
-  background: #fff0f1;
-  border-color: #f3d2d5;
+  color: var(--mi-color-error-resolved);
+  background: color-mix(in oklab, var(--mi-color-error-resolved) 9%, var(--mi-color-card-resolved));
+  border-color: color-mix(in oklab, var(--mi-color-error-resolved) 22%, var(--mi-color-border-resolved));
 }
 
 .mail-toast.is-error {
-  color: #7b3037;
-  background: #fff1f2;
-  border-color: #f0cdd1;
+  color: var(--mi-color-error-resolved);
+  background: color-mix(in oklab, var(--mi-color-error-resolved) 9%, var(--mi-color-card-resolved));
+  border-color: color-mix(in oklab, var(--mi-color-error-resolved) 22%, var(--mi-color-border-resolved));
 }
 
 .simple-editor {
   min-height: 170px;
   overflow: hidden;
-  border-bottom: 1px solid #e4e7ec;
+  border-bottom: 1px solid var(--mi-color-border-resolved);
 }
 
 .simple-editor__toolbar {
@@ -1874,8 +1982,8 @@
   align-items: center;
   gap: 3px;
   padding: 5px 12px;
-  background: #fafbfc;
-  border-bottom: 1px solid #eceef2;
+  background: var(--mi-color-muted-resolved);
+  border-bottom: 1px solid var(--mi-color-border-resolved);
 }
 
 .simple-editor__toolbar button {
@@ -1883,7 +1991,7 @@
   width: 28px;
   height: 28px;
   place-items: center;
-  color: #596477;
+  color: var(--mi-color-muted-foreground-resolved);
   background: transparent;
   border: 0;
   border-radius: 6px;
@@ -1891,8 +1999,8 @@
 
 .simple-editor__toolbar button:hover,
 .simple-editor__toolbar button.is-active {
-  color: #2e5dcc;
-  background: #e9efff;
+  color: var(--mi-color-primary-resolved);
+  background: var(--mi-color-accent-resolved);
 }
 
 .simple-editor__toolbar button svg {
@@ -1905,8 +2013,8 @@
   max-height: 280px;
   overflow-y: auto;
   padding: 14px 17px;
-  color: #253044;
-  font-size: 12px;
+  color: var(--mi-color-foreground-resolved);
+  font-size: var(--mi-font-size-body-resolved);
   line-height: 1.65;
   outline: none;
 }
@@ -1931,14 +2039,14 @@
   align-items: center;
   gap: 8px;
   padding: 7px 9px;
-  background: #f7f9fc;
-  border: 1px solid #e4e8ef;
+  background: var(--mi-color-muted-resolved);
+  border: 1px solid var(--mi-color-border-resolved);
   border-radius: 8px;
 }
 
 .compose-files > div > svg {
   width: 15px;
-  color: #3568ea;
+  color: var(--mi-color-primary-resolved);
 }
 
 .compose-files > div > span {
@@ -1950,14 +2058,14 @@
 
 .compose-files strong {
   overflow: hidden;
-  font-size: 10px;
+  font-size: var(--mi-font-size-ui-resolved);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .compose-files small {
-  color: #7a8495;
-  font-size: 8px;
+  color: var(--mi-color-muted-foreground-resolved);
+  font-size: var(--mi-font-size-meta-resolved);
 }
 
 .compose-files button {
@@ -1965,7 +2073,7 @@
   width: 26px;
   height: 26px;
   place-items: center;
-  color: #8992a1;
+  color: var(--mi-color-muted-foreground-resolved);
   background: transparent;
   border: 0;
 }
@@ -1979,17 +2087,17 @@
   overflow: hidden;
   margin: 10px 16px 0;
   padding: 9px 11px;
-  color: #6b7484;
-  background: #f8f9fb;
-  border-left: 3px solid #ccd5e6;
+  color: var(--mi-color-muted-foreground-resolved);
+  background: var(--mi-color-muted-resolved);
+  border-left: 3px solid var(--mi-color-border-resolved);
   border-radius: 0 7px 7px 0;
-  font-size: 9px;
+  font-size: var(--mi-font-size-meta-resolved);
 }
 
 .compose-quote-preview strong {
   display: block;
   margin-bottom: 4px;
-  color: #4a5669;
+  color: var(--mi-color-foreground-resolved);
 }
 
 .compose-quote-preview p {

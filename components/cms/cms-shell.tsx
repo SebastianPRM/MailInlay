@@ -179,7 +179,7 @@ export function CmsShell() {
         </header>
 
         <div className="cms-content">
-          <MailPanel apiBase="/api/admin/mail" mailboxId="main" />
+          <MailPanel apiBase="/api/admin/mail" mailboxId="main" defaultFoldersCollapsed />
         </div>
       </section>
     </main>

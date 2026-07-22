@@ -51,7 +51,7 @@ Each request authenticates the current panel session, resolves a mailbox limited
 Pin applications to a release tag:
 
 ```bash
-npm install "git+https://github.com/SebastianPRM/MailInlay.git#v0.3.0"
+npm install "git+https://github.com/SebastianPRM/MailInlay.git#v0.3.1"
 ```
 
 The installed package exposes:
@@ -78,11 +78,81 @@ Render MailInlay inside the authenticated project area:
 import { MailPanel } from "@mailinlay/sdk/react"
 
 export default function ProjectMailPage() {
-  return <MailPanel apiBase="/api/admin/mail" mailboxId="main" />
+  return (
+    <div style={{ display: "flex", height: "100%", minHeight: 0 }}>
+      <MailPanel
+        apiBase="/api/admin/mail"
+        mailboxId="main"
+        defaultFoldersCollapsed
+        onOpenSettings={() => openMailboxSettings()}
+      />
+    </div>
+  )
 }
 ```
 
-Give the parent a usable height and `min-height: 0`. MailInlay adapts to the component container rather than the full viewport.
+Give the parent a usable height and `min-height: 0`. `MailPanel` uses `flex: 1`,
+`min-width: 0` and `min-height: 0`; its folder list, message list and reader then
+scroll independently. It does not require a fixed or minimum 640 px height and
+adapts to the component container rather than the full viewport. The host page
+header and footer stay outside MailInlay.
+
+### Folder panel and settings integration
+
+The desktop folder panel can be uncontrolled or controlled by the host:
+
+```tsx
+// Uncontrolled, initially compact
+<MailPanel defaultFoldersCollapsed apiBase="/api/admin/mail" mailboxId="main" />
+
+// Controlled
+<MailPanel
+  apiBase="/api/admin/mail"
+  mailboxId="main"
+  foldersCollapsed={foldersCollapsed}
+  onFoldersCollapsedChange={setFoldersCollapsed}
+/>
+```
+
+At medium widths the panel automatically becomes an icon rail. On phones it is
+replaced by the existing drawer. Manual collapsing does not change the drawer.
+
+Settings remain owned by the host application. Pass `onOpenSettings` to render
+an active settings button in the top bar; without the callback no placeholder
+button is rendered. `showSettings={false}` hides it explicitly. MailInlay never
+accepts or displays IMAP/SMTP passwords in the browser.
+
+### Theme tokens
+
+All public theme tokens are namespaced and can safely reference host variables:
+
+```css
+.project-mail {
+  --mi-color-background: var(--app-background);
+  --mi-color-foreground: var(--app-foreground);
+  --mi-color-card: var(--app-card);
+  --mi-color-primary: var(--app-primary);
+  --mi-color-primary-foreground: var(--app-primary-foreground);
+  --mi-color-muted: var(--app-muted);
+  --mi-color-muted-foreground: var(--app-muted-foreground);
+  --mi-color-border: var(--app-border);
+  --mi-color-sidebar: var(--app-sidebar);
+  --mi-color-sidebar-accent: var(--app-sidebar-accent);
+  --mi-font-family: var(--app-font-family);
+  --mi-font-size-ui: 12px;
+  --mi-font-size-meta: 10.5px;
+  --mi-font-size-body: 14px;
+  --mi-radius: 12px;
+}
+```
+
+Apply `project-mail` through the `className` prop. If the composer portal should
+use the same custom tokens, define them on a shared ancestor such as `:root` or
+`body`. Change these tokens in the host's dark-mode selector to theme every
+MailInlay surface, editor tool and attachment. The legacy `--mi-background`,
+`--mi-text`, `--mi-surface`, `--mi-primary`, `--mi-muted` and `--mi-border`
+variables remain supported for v0.3.0 integrations, but MailInlay no longer
+defines or depends on global names such as `--primary` or `--background`.
 
 ## Add the Next.js route
 
