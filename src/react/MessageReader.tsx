@@ -91,7 +91,7 @@ export function MessageReader(props: Props) {
           )}
 
           <div className="message-body">
-            {html ? <div className="message-html" dangerouslySetInnerHTML={{ __html: html }} /> : message.text?.split(/\n{2,}/).map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+            {html ? <div className="message-html" dangerouslySetInnerHTML={{ __html: html }} /> : message.text?.split(/\n{2,}/).map((paragraph, index) => <p className="message-plain-text" key={index}>{paragraph}</p>)}
           </div>
 
           {message.attachments.length > 0 && (

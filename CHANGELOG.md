@@ -2,6 +2,30 @@
 
 All notable changes to MailInlay are recorded here.
 
+## [0.3.2] - 2026-07-23
+
+### Added
+
+- safe incoming-email support for table markup, layout attributes and a strict
+  allowlist of inline typography and layout styles;
+- responsive normalization for wide email tables and images, with horizontal
+  scrolling retained as a fallback for rigid third-party templates;
+- regression tests for table rendering, remote CSS blocking and plain-text
+  whitespace isolation.
+
+### Changed
+
+- fixed cell widths and all inline `min-width` declarations are removed from
+  incoming HTML to prevent reader overflow;
+- `white-space: pre-line` now applies only to plain-text message paragraphs,
+  never to paragraphs contained in sanitized HTML emails.
+
+### Security
+
+- CSS values containing `url()`, `expression()`, `@import`, `behavior` or
+  `-moz-binding` are rejected while remote and CID image handling remains
+  unchanged.
+
 ## [0.3.1] - 2026-07-22
 
 ### Added
