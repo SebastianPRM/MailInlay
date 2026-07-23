@@ -2,6 +2,13 @@
 
 All notable changes to MailInlay are recorded here.
 
+## [0.3.3] - 2026-07-23
+
+### Fixed
+
+- preserve safe email layout metadata (`class`, `dir`, `lang` and table-header
+  `scope`) required by complex transactional and newsletter templates.
+
 ## [0.3.2] - 2026-07-23
 
 ### Added

@@ -129,10 +129,10 @@ export function sanitizeIncomingHtml(input: string): { html: string; hasRemoteIm
   const html = sanitizeHtml(input, {
     allowedTags: incomingAllowedTags,
     allowedAttributes: {
-      "*": ["style", "width", "height", "align", "valign", "bgcolor", "role"],
+      "*": ["class", "dir", "lang", "style", "width", "height", "align", "valign", "bgcolor", "role"],
       a: ["href", "title", "target", "rel", "style"],
       table: ["width", "height", "align", "valign", "bgcolor", "border", "cellpadding", "cellspacing", "role", "style"],
-      th: ["width", "height", "align", "valign", "bgcolor", "colspan", "rowspan", "role", "style"],
+      th: ["width", "height", "align", "valign", "bgcolor", "colspan", "rowspan", "scope", "role", "style"],
       td: ["width", "height", "align", "valign", "bgcolor", "colspan", "rowspan", "role", "style"],
       colgroup: ["span", "width", "align", "valign", "style"],
       col: ["span", "width", "align", "valign", "style"],

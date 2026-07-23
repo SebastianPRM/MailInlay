@@ -37,8 +37,8 @@ describe("mail HTML sanitizer", () => {
 
   it("keeps email tables, safe layout attributes and safe inline styles", () => {
     const result = sanitizeIncomingHtml(`
-      <table width="420" border="0" cellpadding="12" cellspacing="0" role="presentation" bgcolor="#ffffff" style="border-collapse: collapse; color: #123456; font-family: Arial, sans-serif" onclick="alert(1)">
-        <thead><tr><th colspan="2" align="left" valign="top">Nagłówek</th></tr></thead>
+      <table class="email-card" dir="rtl" lang="ar" width="420" border="0" cellpadding="12" cellspacing="0" role="presentation" bgcolor="#ffffff" style="border-collapse: collapse; color: #123456; font-family: Arial, sans-serif" onclick="alert(1)">
+        <thead><tr><th colspan="2" scope="colgroup" align="left" valign="top">Nagłówek</th></tr></thead>
         <tbody><tr><td rowspan="2" bgcolor="#eeeeee" style="padding: 16px; font-size: 14px">Treść</td><td width="50%" style="width: 50%">Druga kolumna</td></tr></tbody>
         <tfoot><tr><td colspan="2">Stopka</td></tr></tfoot>
       </table>
@@ -52,6 +52,10 @@ describe("mail HTML sanitizer", () => {
     expect(result.html).toContain('cellpadding="12"')
     expect(result.html).toContain('cellspacing="0"')
     expect(result.html).toContain('role="presentation"')
+    expect(result.html).toContain('class="email-card"')
+    expect(result.html).toContain('dir="rtl"')
+    expect(result.html).toContain('lang="ar"')
+    expect(result.html).toContain('scope="colgroup"')
     expect(result.html).toContain('colspan="2"')
     expect(result.html).toContain('rowspan="2"')
     expect(result.html).toContain('width="50%" style="width:50%"')
