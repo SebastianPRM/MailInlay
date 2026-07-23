@@ -23,6 +23,25 @@ export type MailPanelProps = {
 
 type Toast = { kind: "success" | "error"; text: string }
 
+async function runInPool<T>(items: T[], task: (item: T) => Promise<unknown>, concurrency = 3) {
+  const successful: T[] = []
+  const failed: T[] = []
+  let cursor = 0
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (cursor < items.length) {
+      const item = items[cursor++]
+      try {
+        await task(item)
+        successful.push(item)
+      } catch {
+        failed.push(item)
+      }
+    }
+  })
+  await Promise.all(workers)
+  return { successful, failed }
+}
+
 function uniqueAddresses(values: Array<string | undefined>, excluded: string[] = []) {
   const blocked = new Set(excluded.map((value) => value.toLowerCase()))
   const result: string[] = []
@@ -54,6 +73,9 @@ export function MailPanel({
   const [activeFolder, setActiveFolder] = useState<string | null>(null)
   const [messages, setMessages] = useState<MessageSummary[]>([])
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [checkedKeys, setCheckedKeys] = useState<Set<string>>(() => new Set())
+  const [bulkDestination, setBulkDestination] = useState("")
+  const [bulkBusy, setBulkBusy] = useState(false)
   const [detail, setDetail] = useState<MessageDetail | null>(null)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
@@ -128,6 +150,8 @@ export function MailPanel({
     setLoadingMessages(true)
     setPage(1)
     setDetail(null)
+    setCheckedKeys(new Set())
+    setBulkDestination("")
     api.messages({ folder: activeFolder, page: 1, query, unseen: unreadOnly }, controller.signal)
       .then((response) => {
         setMessages(response.items)
@@ -173,6 +197,7 @@ export function MailPanel({
       await loadFolders()
       const response = await api.messages({ folder: activeFolder, page: 1, query, unseen: unreadOnly })
       setMessages(response.items)
+      setCheckedKeys((current) => new Set([...current].filter((key) => response.items.some((message) => message.messageKey === key))))
       setPage(1)
       setHasMore(response.hasMore)
       if (selectedKey && !response.items.some((message) => message.messageKey === selectedKey)) {
@@ -211,6 +236,8 @@ export function MailPanel({
     setSearchValue("")
     setQuery("")
     setUnreadOnly(false)
+    setCheckedKeys(new Set())
+    setBulkDestination("")
   }
 
   const selectMessage = (messageKey: string) => {
@@ -236,6 +263,97 @@ export function MailPanel({
     setSelectedKey(null)
     setMobileReaderOpen(false)
     void loadFolders().catch(() => undefined)
+  }
+
+  const toggleChecked = (messageKey: string, checked: boolean) => {
+    setCheckedKeys((current) => {
+      const next = new Set(current)
+      if (checked) next.add(messageKey)
+      else next.delete(messageKey)
+      return next
+    })
+  }
+
+  const toggleAllChecked = (checked: boolean) => {
+    setCheckedKeys((current) => {
+      const next = new Set(current)
+      for (const message of messages) {
+        if (checked) next.add(message.messageKey)
+        else next.delete(message.messageKey)
+      }
+      return next
+    })
+  }
+
+  const runBulkAction = async (
+    action: (messageKey: string) => Promise<unknown>,
+    successMessage: (count: number) => string,
+  ) => {
+    if (bulkBusy || checkedKeys.size === 0) return
+    const keys = [...checkedKeys]
+    setBulkBusy(true)
+    try {
+      const result = await runInPool(keys, action)
+      const successful = new Set(result.successful)
+      if (successful.size) {
+        setMessages((items) => items.filter((item) => !successful.has(item.messageKey)))
+        setCheckedKeys(new Set(result.failed))
+        if (selectedKey && successful.has(selectedKey)) {
+          setSelectedKey(null)
+          setMobileReaderOpen(false)
+        }
+        void loadFolders().catch(() => undefined)
+      }
+      if (result.failed.length) {
+        showToast(
+          result.successful.length
+            ? `Wykonano operację dla ${result.successful.length} z ${keys.length} wiadomości. Spróbuj ponownie dla pozostałych.`
+            : "Nie udało się wykonać operacji dla zaznaczonych wiadomości.",
+          "error",
+        )
+      } else {
+        setBulkDestination("")
+        showToast(successMessage(result.successful.length))
+      }
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  const bulkMove = async () => {
+    const destination = folders.find((folder) => folder.path === bulkDestination)
+    if (!destination || destination.path === activeFolder) {
+      showToast("Wybierz inny folder docelowy.", "error")
+      return
+    }
+    await runBulkAction(
+      (messageKey) => api.move(messageKey, destination.path),
+      (count) => `Przeniesiono ${count} ${count === 1 ? "wiadomość" : "wiadomości"} do folderu „${destination.name}”`,
+    )
+  }
+
+  const bulkDelete = async () => {
+    const current = folders.find((folder) => folder.path === activeFolder)
+    if (current?.specialUse === "trash") {
+      const selectedLabel = checkedKeys.size === 1
+        ? "1 zaznaczoną wiadomość"
+        : `${checkedKeys.size} zaznaczone wiadomości`
+      if (!window.confirm(`Usunąć trwale ${selectedLabel}? Tej operacji nie można cofnąć.`)) return
+      await runBulkAction(
+        (messageKey) => api.delete(messageKey),
+        (count) => `Trwale usunięto ${count} ${count === 1 ? "wiadomość" : "wiadomości"}`,
+      )
+      return
+    }
+    const trash = folders.find((folder) => folder.specialUse === "trash")
+    if (!trash) {
+      showToast("Folder kosza nie jest dostępny na serwerze.", "error")
+      return
+    }
+    await runBulkAction(
+      (messageKey) => api.move(messageKey, trash.path),
+      (count) => `Przeniesiono do kosza ${count} ${count === 1 ? "wiadomość" : "wiadomości"}`,
+    )
   }
 
   const move = async (message: MessageDetail, destination: MailFolder | undefined, confirmation: string) => {
@@ -345,6 +463,11 @@ export function MailPanel({
             title={activeFolderItem?.name ?? (initialLoading ? "Łączenie…" : "Poczta")}
             messages={messages}
             selectedKey={selectedKey}
+            checkedKeys={checkedKeys}
+            folders={folders}
+            activeFolder={activeFolder}
+            bulkDestination={bulkDestination}
+            bulkBusy={bulkBusy}
             searchValue={searchValue}
             unreadOnly={unreadOnly}
             loading={loadingMessages || initialLoading}
@@ -354,6 +477,12 @@ export function MailPanel({
             onSearch={(value) => setQuery(value === undefined ? searchValue.trim() : value)}
             onUnreadOnly={setUnreadOnly}
             onSelect={selectMessage}
+            onToggleChecked={toggleChecked}
+            onToggleAll={toggleAllChecked}
+            onClearChecked={() => setCheckedKeys(new Set())}
+            onBulkDestination={setBulkDestination}
+            onBulkMove={() => void bulkMove()}
+            onBulkDelete={() => void bulkDelete()}
             onToggleStar={(message) => void toggleStar(message)}
             onLoadMore={async () => {
               if (!activeFolder || loadingMore) return

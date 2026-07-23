@@ -51,7 +51,7 @@ Each request authenticates the current panel session, resolves a mailbox limited
 Pin applications to a release tag:
 
 ```bash
-npm install "git+https://github.com/SebastianPRM/MailInlay.git#v0.3.1"
+npm install "git+https://github.com/SebastianPRM/MailInlay.git#v0.3.5"
 ```
 
 The installed package exposes:
@@ -63,6 +63,26 @@ The installed package exposes:
 ```
 
 Node.js 20 or newer is required. The backend adapter needs the Node.js runtime, not an Edge runtime.
+
+## Upgrade an existing installation
+
+Update the pinned Git tag from any previous release to `v0.3.5`:
+
+```bash
+npm install "git+https://github.com/SebastianPRM/MailInlay.git#v0.3.5"
+npm ls @mailinlay/sdk
+npm run build
+```
+
+Commit the updated `package.json` and lockfile, then redeploy or restart the host
+application. Install dependencies again inside the production or Docker build;
+an old `node_modules` directory still contains the previous SDK bundle.
+
+No database migration, mailbox configuration change or route-handler change is
+required for this release. Existing `MailPanel`, `createMailInlayHandler` and
+relay integrations remain compatible. Keep the existing one-time stylesheet
+import (`@mailinlay/sdk/styles.css`), because the selection toolbar uses styles
+shipped with the SDK.
 
 ## Add the React panel
 

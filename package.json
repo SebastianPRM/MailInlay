@@ -1,6 +1,6 @@
 {
   "name": "@mailinlay/sdk",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Embeddable IMAP/SMTP mailbox for React and Next.js admin panels",
   "private": true,
   "author": {

@@ -59,4 +59,56 @@ describe("MailPanel integration controls", () => {
     rerender(<MailPanel apiBase="/api/mail" mailboxId="main" onOpenSettings={onOpenSettings} showSettings={false} />)
     expect(screen.queryByRole("button", { name: "Otwórz ustawienia poczty" })).toBeNull()
   })
+
+  it("moves and deletes selected messages with bulk actions", async () => {
+    const mutations: Array<{ pathname: string; body: unknown }> = []
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const pathname = new URL(String(input)).pathname
+      if (pathname.endsWith("/folders")) {
+        return Response.json({
+          ...foldersResponse,
+          folders: [
+            ...foldersResponse.folders,
+            { path: "Archive", name: "Archiwum", specialUse: "archive", unread: 0, total: 0 },
+            { path: "Trash", name: "Kosz", specialUse: "trash", unread: 0, total: 0 },
+          ],
+        })
+      }
+      if (pathname.endsWith("/messages")) {
+        return Response.json({
+          items: [
+            { messageKey: "one", from: [{ address: "one@example.com" }], subject: "Pierwsza", date: "2026-07-23T10:00:00Z", seen: false, flagged: false, hasAttachments: false },
+            { messageKey: "two", from: [{ address: "two@example.com" }], subject: "Druga", date: "2026-07-23T09:00:00Z", seen: true, flagged: false, hasAttachments: false },
+          ],
+          page: 1,
+          limit: 30,
+          hasMore: false,
+          total: 2,
+        })
+      }
+      mutations.push({ pathname, body: init?.body ? JSON.parse(String(init.body)) : undefined })
+      return Response.json({ ok: true })
+    }))
+
+    render(<MailPanel apiBase="/api/mail" mailboxId="main" />)
+    const first = await screen.findByRole("checkbox", { name: "Zaznacz wiadomość: Pierwsza" })
+    fireEvent.click(first)
+    fireEvent.change(screen.getByRole("combobox", { name: "Folder docelowy" }), { target: { value: "Archive" } })
+    fireEvent.click(screen.getByRole("button", { name: "Przenieś zaznaczone wiadomości" }))
+
+    await waitFor(() => expect(mutations).toContainEqual({
+      pathname: "/api/mail/messages/one/move",
+      body: { destinationFolder: "Archive" },
+    }))
+    await waitFor(() => expect(screen.queryByRole("checkbox", { name: "Zaznacz wiadomość: Pierwsza" })).toBeNull())
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Zaznacz wiadomość: Druga" }))
+    fireEvent.click(screen.getByRole("button", { name: "Usuń zaznaczone wiadomości" }))
+
+    await waitFor(() => expect(mutations).toContainEqual({
+      pathname: "/api/mail/messages/two/move",
+      body: { destinationFolder: "Trash" },
+    }))
+    await waitFor(() => expect(screen.queryByRole("checkbox", { name: "Zaznacz wiadomość: Druga" })).toBeNull())
+  })
 })

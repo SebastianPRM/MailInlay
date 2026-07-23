@@ -2,6 +2,24 @@
 
 All notable changes to MailInlay are recorded here.
 
+## [0.3.5] - 2026-07-23
+
+### Added
+
+- individual and select-all checkboxes for messages currently loaded in the
+  active folder;
+- a bulk-action toolbar that moves selected messages to any available folder
+  or to Trash;
+- confirmed permanent bulk deletion when the active folder is Trash;
+- integration and component tests for selection, moving and deletion.
+
+### Changed
+
+- successful messages disappear immediately after a bulk operation while
+  failed messages remain selected for a retry;
+- bulk IMAP requests run with bounded concurrency to avoid opening too many
+  simultaneous mail-server connections.
+
 ## [0.3.4] - 2026-07-23
 
 ### Fixed
