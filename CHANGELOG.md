@@ -2,6 +2,13 @@
 
 All notable changes to MailInlay are recorded here.
 
+## [0.3.4] - 2026-07-23
+
+### Fixed
+
+- pin the HTML sanitizer to the audited Node 20-compatible release so panel
+  hosts do not resolve a newer package that requires Node 22.
+
 ## [0.3.3] - 2026-07-23
 
 ### Fixed
