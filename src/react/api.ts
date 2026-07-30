@@ -3,6 +3,8 @@ import type {
   FoldersResponse,
   MessageDetail,
   MessagesResponse,
+  SearchIn,
+  SearchScope,
   SendResponse,
 } from "../shared/types"
 
@@ -36,7 +38,7 @@ export function createApi(apiBase: string, mailboxId: string) {
     folders(signal?: AbortSignal) {
       return request<FoldersResponse>(url(apiBase, "folders", mailboxId), { signal })
     },
-    messages(input: { folder: string; page: number; limit?: number; query?: string; unseen?: boolean }, signal?: AbortSignal) {
+    messages(input: { folder: string; page: number; limit?: number; query?: string; unseen?: boolean; scope?: SearchScope; searchIn?: SearchIn }, signal?: AbortSignal) {
       const { unseen, ...params } = input
       return request<MessagesResponse>(url(apiBase, "messages", mailboxId, { ...params, unseen: unseen ? "1" : undefined }), { signal })
     },

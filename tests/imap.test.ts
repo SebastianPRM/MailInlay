@@ -19,12 +19,12 @@ const mailbox: MailboxConfig = {
   smtp: { host: "smtp.example.com", port: 465, secure: true, username: "mail@example.com", password: "secret" },
 }
 
-function fakeMessage(uid: number) {
+function fakeMessage(uid: number, date = "2026-07-01T10:00:00Z") {
   return {
     uid,
     flags: new Set<string>(),
-    envelope: { subject: `Wiadomość ${uid}`, date: new Date("2026-07-01T10:00:00Z"), from: [] },
-    internalDate: new Date("2026-07-01T10:00:00Z"),
+    envelope: { subject: `Wiadomość ${uid}`, date: new Date(date), from: [] },
+    internalDate: new Date(date),
   }
 }
 
@@ -36,7 +36,7 @@ function fakeClient(overrides: Record<string, unknown> = {}) {
     close: vi.fn(() => undefined),
     getQuota: vi.fn(async () => false),
     list: vi.fn(async () => []),
-    getMailboxLock: vi.fn(async () => ({ release: vi.fn() })),
+    getMailboxLock: vi.fn(async (_folder?: string, _options?: unknown) => ({ release: vi.fn() })),
     mailbox: { exists: 0, uidValidity: BigInt(1) },
     fetchAll: vi.fn(async () => []),
     fetchOne: vi.fn(async () => null),
@@ -68,6 +68,59 @@ describe("IMAP listing", () => {
     expect(response.total).toBe(2)
     expect(response.items).toHaveLength(2)
     expect(response.items[0].subject).toBe("Wiadomość 5")
+  })
+
+  it("adds message body to search criteria only when requested", async () => {
+    const client = fakeClient()
+    await getMessages(mailbox, {
+      folder: "INBOX",
+      page: 1,
+      limit: 30,
+      query: "faktura",
+      searchIn: "all",
+    })
+    expect(client.search).toHaveBeenCalledWith({
+      or: [
+        { from: "faktura" },
+        { to: "faktura" },
+        { cc: "faktura" },
+        { subject: "faktura" },
+        { body: "faktura" },
+      ],
+    }, { uid: true })
+  })
+
+  it("merges all-folder results by date and preserves their folder paths", async () => {
+    let currentFolder = ""
+    const client = fakeClient({
+      list: vi.fn(async () => [
+        { path: "INBOX", name: "Odebrane", flags: new Set<string>(), specialUse: "\\Inbox" },
+        { path: "Sent", name: "Wysłane", flags: new Set<string>(), specialUse: "\\Sent" },
+      ]),
+      search: vi.fn(async () => currentFolder === "INBOX" ? [11] : [22]),
+      fetchAll: vi.fn(async () => currentFolder === "INBOX"
+        ? [fakeMessage(11, "2026-07-28T10:00:00Z")]
+        : [fakeMessage(22, "2026-07-29T10:00:00Z")]),
+    })
+    client.getMailboxLock.mockImplementation(async (folder?: string) => {
+      if (!folder) throw new Error("missing folder")
+      currentFolder = folder
+      client.mailbox = { exists: 1, uidValidity: folder === "INBOX" ? BigInt(10) : BigInt(20) }
+      return { release: vi.fn() }
+    })
+
+    const response = await getMessages(mailbox, {
+      folder: "INBOX",
+      page: 1,
+      limit: 30,
+      query: "faktura",
+      scope: "all",
+    })
+
+    expect(client.getMailboxLock).toHaveBeenCalledTimes(2)
+    expect(response.total).toBe(2)
+    expect(response.items.map((item) => item.folderPath)).toEqual(["Sent", "INBOX"])
+    expect(response.items.map((item) => item.subject)).toEqual(["Wiadomość 22", "Wiadomość 11"])
   })
 })
 

@@ -120,6 +120,8 @@ export function createMailInlayHandler(input: HandlerInput) {
           page: url.searchParams.get("page") ?? 1,
           limit: url.searchParams.get("limit") ?? 30,
           query: url.searchParams.get("query") ?? "",
+          scope: url.searchParams.get("scope") ?? "folder",
+          searchIn: url.searchParams.get("searchIn") ?? "headers",
           unseen: url.searchParams.get("unseen") ?? "",
         })
         return json(await getMessages(mailbox, parsed))

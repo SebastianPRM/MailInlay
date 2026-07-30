@@ -60,6 +60,46 @@ describe("MailPanel integration controls", () => {
     expect(screen.queryByRole("button", { name: "Otwórz ustawienia poczty" })).toBeNull()
   })
 
+  it("keeps unread filtering separate while applying global body search options", async () => {
+    const requested: URL[] = []
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const requestedUrl = new URL(String(input))
+      requested.push(requestedUrl)
+      return Response.json(requestedUrl.pathname.endsWith("/folders")
+        ? {
+            ...foldersResponse,
+            folders: [
+              ...foldersResponse.folders,
+              { path: "Archive", name: "Archiwum", specialUse: "archive", unread: 0, total: 0 },
+            ],
+          }
+        : { items: [], page: 1, limit: 30, hasMore: false, total: 0 })
+    }))
+
+    render(<MailPanel apiBase="/api/mail" mailboxId="main" />)
+    await screen.findByRole("button", { name: "Opcje" })
+    fireEvent.change(screen.getByRole("searchbox", { name: "Szukaj wiadomości" }), { target: { value: "faktura" } })
+    fireEvent.click(screen.getByRole("button", { name: "Opcje" }))
+    fireEvent.click(screen.getByRole("radio", { name: "Wszystkie foldery" }))
+    fireEvent.click(screen.getByRole("radio", { name: "Także w treści" }))
+    fireEvent.click(screen.getByRole("button", { name: "Zastosuj" }))
+
+    await waitFor(() => expect(requested.some((url) => (
+      url.searchParams.get("query") === "faktura"
+      && url.searchParams.get("scope") === "all"
+      && url.searchParams.get("searchIn") === "all"
+      && !url.searchParams.has("unseen")
+    ))).toBe(true))
+
+    fireEvent.click(screen.getByRole("button", { name: "Pokaż tylko nieprzeczytane" }))
+    await waitFor(() => expect(requested.some((url) => (
+      url.searchParams.get("query") === "faktura"
+      && url.searchParams.get("scope") === "all"
+      && url.searchParams.get("searchIn") === "all"
+      && url.searchParams.get("unseen") === "1"
+    ))).toBe(true))
+  })
+
   it("moves and deletes selected messages with bulk actions", async () => {
     const mutations: Array<{ pathname: string; body: unknown }> = []
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

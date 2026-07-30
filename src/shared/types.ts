@@ -44,6 +44,8 @@ export type EmailAddress = {
 }
 
 export type FolderSpecialUse = "inbox" | "sent" | "trash" | "spam" | "drafts" | "archive"
+export type SearchScope = "folder" | "all"
+export type SearchIn = "headers" | "all"
 
 export type MailFolder = {
   path: string
@@ -62,6 +64,7 @@ export type MailboxPublicInfo = {
 
 export type MessageSummary = {
   messageKey: string
+  folderPath?: string
   from: EmailAddress[]
   subject: string
   date: string

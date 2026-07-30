@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AlertTriangle, Check, Menu, PenSquare, RefreshCw, Settings, Wifi, X } from "lucide-react"
-import type { MailFolder, MailboxPublicInfo, MessageDetail, MessageSummary, SendResponse } from "../shared/types"
+import type { MailFolder, MailboxPublicInfo, MessageDetail, MessageSummary, SearchIn, SearchScope, SendResponse } from "../shared/types"
 import { createApi, MailInlayApiError } from "./api"
 import { FolderList } from "./FolderList"
 import { MailComposer, type ComposeDraft } from "./MailComposer"
@@ -79,8 +79,11 @@ export function MailPanel({
   const [detail, setDetail] = useState<MessageDetail | null>(null)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
+  const [total, setTotal] = useState(0)
   const [searchValue, setSearchValue] = useState("")
   const [query, setQuery] = useState("")
+  const [searchScope, setSearchScope] = useState<SearchScope>("folder")
+  const [searchIn, setSearchIn] = useState<SearchIn>("headers")
   const [unreadOnly, setUnreadOnly] = useState(false)
   const [loadingFolders, setLoadingFolders] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
@@ -152,16 +155,24 @@ export function MailPanel({
     setDetail(null)
     setCheckedKeys(new Set())
     setBulkDestination("")
-    api.messages({ folder: activeFolder, page: 1, query, unseen: unreadOnly }, controller.signal)
+    api.messages({
+      folder: activeFolder,
+      page: 1,
+      query,
+      unseen: unreadOnly,
+      scope: query ? searchScope : "folder",
+      searchIn,
+    }, controller.signal)
       .then((response) => {
         setMessages(response.items)
         setHasMore(response.hasMore)
+        setTotal(response.total)
         setSelectedKey((current) => response.items.some((message) => message.messageKey === current) ? current : null)
       })
       .catch((error) => reportError(error, "Nie udało się pobrać wiadomości."))
       .finally(() => setLoadingMessages(false))
     return () => controller.abort()
-  }, [activeFolder, api, query, unreadOnly, reportError])
+  }, [activeFolder, api, query, searchIn, searchScope, unreadOnly, reportError])
 
   useEffect(() => {
     if (!selectedKey) {
@@ -179,7 +190,7 @@ export function MailPanel({
         if (!message.seen) {
           setMessages((items) => items.map((item) => item.messageKey === selectedKey ? { ...item, seen: true } : item))
           setDetail((current) => current ? { ...current, seen: true } : current)
-          adjustUnread(activeFolder, -1)
+          adjustUnread(message.folderPath ?? activeFolder, -1)
           api.update(selectedKey, { seen: true }).catch(() => undefined)
         }
       })
@@ -195,11 +206,19 @@ export function MailPanel({
     setRefreshing(true)
     try {
       await loadFolders()
-      const response = await api.messages({ folder: activeFolder, page: 1, query, unseen: unreadOnly })
+      const response = await api.messages({
+        folder: activeFolder,
+        page: 1,
+        query,
+        unseen: unreadOnly,
+        scope: query ? searchScope : "folder",
+        searchIn,
+      })
       setMessages(response.items)
       setCheckedKeys((current) => new Set([...current].filter((key) => response.items.some((message) => message.messageKey === key))))
       setPage(1)
       setHasMore(response.hasMore)
+      setTotal(response.total)
       if (selectedKey && !response.items.some((message) => message.messageKey === selectedKey)) {
         setSelectedKey(null)
       }
@@ -209,7 +228,7 @@ export function MailPanel({
     } finally {
       setRefreshing(false)
     }
-  }, [activeFolder, api, loadFolders, query, refreshing, selectedKey, sessionExpired, showToast, unreadOnly, reportError])
+  }, [activeFolder, api, loadFolders, query, refreshing, searchIn, searchScope, selectedKey, sessionExpired, showToast, unreadOnly, reportError])
 
   const refreshRef = useRef(refresh)
   useEffect(() => { refreshRef.current = refresh }, [refresh])
@@ -235,7 +254,10 @@ export function MailPanel({
     setMobileReaderOpen(false)
     setSearchValue("")
     setQuery("")
+    setSearchScope("folder")
+    setSearchIn("headers")
     setUnreadOnly(false)
+    setTotal(0)
     setCheckedKeys(new Set())
     setBulkDestination("")
   }
@@ -322,7 +344,7 @@ export function MailPanel({
 
   const bulkMove = async () => {
     const destination = folders.find((folder) => folder.path === bulkDestination)
-    if (!destination || destination.path === activeFolder) {
+    if (!destination || (!query && destination.path === activeFolder)) {
       showToast("Wybierz inny folder docelowy.", "error")
       return
     }
@@ -333,7 +355,7 @@ export function MailPanel({
   }
 
   const bulkDelete = async () => {
-    const current = folders.find((folder) => folder.path === activeFolder)
+    const current = query ? undefined : folders.find((folder) => folder.path === activeFolder)
     if (current?.specialUse === "trash") {
       const selectedLabel = checkedKeys.size === 1
         ? "1 zaznaczoną wiadomość"
@@ -368,7 +390,7 @@ export function MailPanel({
   }
 
   const deleteMessage = async (message: MessageDetail) => {
-    const current = folders.find((folder) => folder.path === activeFolder)
+    const current = folders.find((folder) => folder.path === (message.folderPath ?? activeFolder))
     if (current?.specialUse === "trash") {
       if (!window.confirm("Usunąć tę wiadomość trwale? Tej operacji nie można cofnąć.")) return
       try {
@@ -388,7 +410,7 @@ export function MailPanel({
       await api.update(message.messageKey, { seen: false })
       setMessages((items) => items.map((item) => item.messageKey === message.messageKey ? { ...item, seen: false } : item))
       setDetail((current) => current ? { ...current, seen: false } : current)
-      adjustUnread(activeFolder, 1)
+      adjustUnread(message.folderPath ?? activeFolder, 1)
       showToast("Wiadomość oznaczono jako nieprzeczytaną")
     } catch (error) {
       reportError(error, "Nie udało się zmienić statusu.")
@@ -432,6 +454,7 @@ export function MailPanel({
   }
 
   const activeFolderItem = folders.find((folder) => folder.path === activeFolder)
+  const detailFolderItem = folders.find((folder) => folder.path === (detail?.folderPath ?? activeFolder))
   const archiveFolder = folders.find((folder) => folder.specialUse === "archive")
   const initialLoading = loadingFolders && !mailbox
 
@@ -460,7 +483,7 @@ export function MailPanel({
         <div className="mail-folders-pane"><FolderList folders={folders} mailbox={mailbox} activeFolder={activeFolder} onSelect={selectFolder} onCompose={() => openCompose()} collapsed={foldersCollapsed} onCollapsedChange={setFoldersCollapsed} /></div>
         <div className="mail-list-pane">
           <MessageList
-            title={activeFolderItem?.name ?? (initialLoading ? "Łączenie…" : "Poczta")}
+            title={query ? "Wyniki wyszukiwania" : activeFolderItem?.name ?? (initialLoading ? "Łączenie…" : "Poczta")}
             messages={messages}
             selectedKey={selectedKey}
             checkedKeys={checkedKeys}
@@ -469,12 +492,21 @@ export function MailPanel({
             bulkDestination={bulkDestination}
             bulkBusy={bulkBusy}
             searchValue={searchValue}
+            searchActive={Boolean(query)}
+            searchScope={searchScope}
+            searchIn={searchIn}
             unreadOnly={unreadOnly}
+            total={total}
             loading={loadingMessages || initialLoading}
             loadingMore={loadingMore}
             hasMore={hasMore}
             onSearchValue={setSearchValue}
             onSearch={(value) => setQuery(value === undefined ? searchValue.trim() : value)}
+            onSearchOptions={(scope, nextSearchIn) => {
+              setSearchScope(scope)
+              setSearchIn(nextSearchIn)
+              setQuery(searchValue.trim())
+            }}
             onUnreadOnly={setUnreadOnly}
             onSelect={selectMessage}
             onToggleChecked={toggleChecked}
@@ -488,10 +520,18 @@ export function MailPanel({
               if (!activeFolder || loadingMore) return
               setLoadingMore(true)
               try {
-                const response = await api.messages({ folder: activeFolder, page: page + 1, query, unseen: unreadOnly })
+                const response = await api.messages({
+                  folder: activeFolder,
+                  page: page + 1,
+                  query,
+                  unseen: unreadOnly,
+                  scope: query ? searchScope : "folder",
+                  searchIn,
+                })
                 setMessages((items) => [...items, ...response.items.filter((next) => !items.some((item) => item.messageKey === next.messageKey))])
                 setPage(response.page)
                 setHasMore(response.hasMore)
+                setTotal(response.total)
               } catch (error) {
                 reportError(error, "Nie udało się pobrać kolejnych wiadomości.")
               } finally { setLoadingMore(false) }
@@ -502,9 +542,9 @@ export function MailPanel({
           <MessageReader
             message={detail}
             loading={loadingDetail}
-            folderLabel={activeFolderItem?.name ?? "Poczta"}
-            canArchive={Boolean(archiveFolder && archiveFolder.path !== activeFolder)}
-            permanentDelete={activeFolderItem?.specialUse === "trash"}
+            folderLabel={detailFolderItem?.name ?? detail?.folderPath ?? activeFolderItem?.name ?? "Poczta"}
+            canArchive={Boolean(archiveFolder && archiveFolder.path !== (detail?.folderPath ?? activeFolder))}
+            permanentDelete={detailFolderItem?.specialUse === "trash"}
             onToggleStar={(message) => void toggleStar(message)}
             onDelete={(message) => void deleteMessage(message)}
             onArchive={(message) => void move(message, archiveFolder, "Wiadomość zarchiwizowano")}

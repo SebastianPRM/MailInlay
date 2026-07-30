@@ -51,7 +51,7 @@ Each request authenticates the current panel session, resolves a mailbox limited
 Pin applications to a release tag:
 
 ```bash
-npm install "git+https://github.com/SebastianPRM/MailInlay.git#v0.3.5"
+npm install "git+https://github.com/SebastianPRM/MailInlay.git#v0.3.6"
 ```
 
 The installed package exposes:
@@ -69,7 +69,7 @@ Node.js 20 or newer is required. The backend adapter needs the Node.js runtime, 
 Update the pinned Git tag from any previous release to `v0.3.5`:
 
 ```bash
-npm install "git+https://github.com/SebastianPRM/MailInlay.git#v0.3.5"
+npm install "git+https://github.com/SebastianPRM/MailInlay.git#v0.3.6"
 npm ls @mailinlay/sdk
 npm run build
 ```

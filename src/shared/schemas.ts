@@ -11,6 +11,8 @@ export const listMessagesSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(30),
   query: z.string().trim().max(200).default(""),
+  scope: z.enum(["folder", "all"]).default("folder"),
+  searchIn: z.enum(["headers", "all"]).default("headers"),
   unseen: z
     .string()
     .default("")

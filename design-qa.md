@@ -1,49 +1,68 @@
-**Design QA**
+**Design QA — globalne wyszukiwanie**
 
-- Source visual truth: `/Users/sebastianpawelczyk/Desktop/mail-inlay-ui-design.zip`
-- Implementation: `http://localhost:4173/`
-- Planned viewports: 1440 × 900, 1024 × 768, 768 × 900, 480 × 820
-- Planned states: vertical CMS navigation, horizontal CMS navigation, narrow container list, narrow container reader, compose sheet
-- Implementation screenshot: unavailable
-- Full-view comparison evidence: blocked — the in-app browser control surface is unavailable in this session, and permission to use a local headless browser is pending.
-- Focused region comparison evidence: blocked for the same reason.
+- Source visual truth: `/Users/sebastianpawelczyk/.codex/generated_images/019fb23c-6cb6-7d41-a67d-55090c2a048d/call_W7HGTSEFIvw0vaCNUEwn4EYC.png`
+- Normalized source: `/Users/sebastianpawelczyk/.codex/visualizations/2026/07/30/019fb23c-6cb6-7d41-a67d-55090c2a048d/source-search-options-normalized.png`
+- Implementation screenshot: `/Users/sebastianpawelczyk/.codex/visualizations/2026/07/30/019fb23c-6cb6-7d41-a67d-55090c2a048d/implementation-search-options.png`
+- Full-view comparison: `/Users/sebastianpawelczyk/.codex/visualizations/2026/07/30/019fb23c-6cb6-7d41-a67d-55090c2a048d/design-qa-comparison.png`
+- Focused comparison: `/Users/sebastianpawelczyk/.codex/visualizations/2026/07/30/019fb23c-6cb6-7d41-a67d-55090c2a048d/design-qa-comparison-focus.png`
+- Viewport and CSS size: 1280 × 720.
+- Source pixels: 1672 × 941, normalized to 1280 × 720.
+- Implementation pixels: 1280 × 720.
+- Density normalization: both compared at 1280 × 720; browser capture uses device scale factor 1.
+- State: search query entered, scope `Wszystkie foldery`, search target `Także w treści`, separate `Nieprzeczytane` filter active, search-options popover open, global results displaying folder badges.
 
-**Checks completed without browser rendering**
+**Full-view comparison evidence**
 
-- Production build: passed.
-- TypeScript validation: passed.
-- Server response: HTTP 200.
-- Container-query tiers are present for 1120 px, 860 px, 760 px and 480 px.
-- CMS navigation remains part of the layout in vertical and horizontal variants.
-- Compose layer uses a portal and is centered against the full viewport.
-- Core controls are wired: layout switch, folders, search, unread filter, refresh, read state, star, archive, trash, mark unread, image reveal, download feedback, reply/forward and compose validation.
-- Accessibility attributes and reduced-motion handling are present.
+- The existing Northdesk shell, MailInlay top bar, collapsed folder rail, list width and reader width remain aligned with the real product.
+- The search settings are a separate control beside the search field. The existing unread-filter control remains in the title row and its active chip appears independently below the search row.
+- The implementation uses live mailbox content, so subjects and the reader state intentionally differ from the fictional mock data.
+
+**Focused region comparison evidence**
+
+- The focused side-by-side comparison confirms equivalent hierarchy: title row, search row, separate options trigger, unread chip, anchored popover, radio groups and primary apply button.
+- Folder identity is visible on every search result as a compact pill.
+- The implementation popover is slightly wider than the generated mock so Polish labels do not wrap or clip. This is an intentional usability adjustment.
+
+**Required fidelity surfaces**
+
+- Fonts and typography: passed. Existing project font, weights, truncation and compact metadata scale are preserved.
+- Spacing and layout rhythm: passed. Search controls fit the existing list width without resizing the three-column layout; popover anchoring and vertical rhythm match the selected direction.
+- Colors and visual tokens: passed. All new controls use existing MailInlay primary, accent, border, popover and shadow tokens.
+- Image quality and asset fidelity: passed. The feature introduces no raster assets; icons come from the project’s existing Lucide dependency.
+- Copy and content: passed. Polish labels match the selected flow and clearly separate unread filtering from search configuration.
+
+**Interaction verification**
+
+- Opened and closed `Opcje`.
+- Selected `Wszystkie foldery` and `Także w treści`.
+- Applied the options and received merged live results from multiple IMAP folders.
+- Confirmed folder badges in global results, including INBOX and Trash.
+- Activated the separate `Nieprzeczytane` control while preserving the selected search options.
+- Opened a result from the global search.
+- Checked browser console: no errors.
 
 **Findings**
 
-- [P1] Visual comparison cannot be completed.
-  Location: all rendered views.
-  Evidence: no browser-rendered implementation screenshot and no captured source screenshot are available.
-  Impact: spacing, typography, overflow, crop and responsive behavior cannot be signed off visually.
-  Fix: capture the original project and the implementation at matching viewports, combine the screenshots for comparison, then fix all P0/P1/P2 differences.
+- No actionable P0, P1 or P2 findings.
+- [P3] The actual product’s active unread icon is visually quieter than the generated mock’s solid-blue treatment. This is acceptable because preserving the existing component style was a user requirement.
 
-**Open Questions**
+**Comparison history**
 
-- Permission to use a local headless browser for screenshot capture and interaction testing is pending.
+- Initial implementation capture showed the correct controls and global results but an empty reader.
+- A result was opened to verify folder-aware message access. Enabling the unread filter can remove that result after it becomes read, which is expected product behavior and does not affect the search-control comparison.
+- The final focused comparison confirmed the requested separation and required folder labels; no P0/P1/P2 fixes remained.
 
-**Implementation Checklist**
+**Implementation checklist**
 
-- Capture the original reference project at 1440 × 900.
-- Capture both CMS variants at 1440 × 900.
-- Capture vertical CMS at 1024 × 768 and 768 × 900.
-- Capture the narrow list, reader and compose states at 480 × 820.
-- Test the main compose flow and check browser console errors.
-- Compare typography, spacing, tokens, icons and content against the source direction.
-- Fix any P0/P1/P2 findings and repeat the comparison.
+- [x] Separate unread filter and search settings.
+- [x] Current-folder and all-folder scope.
+- [x] Header-only and body-inclusive search.
+- [x] Folder labels in results and reader.
+- [x] Browser interaction and console verification.
+- [x] Full and focused visual comparison.
 
-**Follow-up Polish**
+**Follow-up polish**
 
-- Evaluate whether the 8–10 px utility text needs a one-step size increase after real rendering.
-- Check the compact host rail tooltips and narrow reply-bar labels in the browser.
+- P3 only: consider a tooltip explaining that searching message bodies can take longer on large mailboxes.
 
-final result: blocked
+final result: passed

@@ -6,6 +6,8 @@ import type {
   MailboxConfig,
   MessageDetail,
   MessagesResponse,
+  SearchIn,
+  SearchScope,
 } from "../shared/types"
 import { mapFolders, findSpecialFolder } from "./folders"
 import { decodeMessageKey, encodeMessageKey, type MessageKeyPayload } from "./message-key"
@@ -110,6 +112,7 @@ export async function getFolders(config: MailboxConfig): Promise<FoldersResponse
 function summaryFromFetch(message: FetchMessageObject, folder: string, uidValidity: bigint) {
   return {
     messageKey: encodeMessageKey({ folder, uidValidity: uidValidity.toString(), uid: message.uid }),
+    folderPath: folder,
     from: addressList(message.envelope?.from),
     subject: message.envelope?.subject?.trim() || "(bez tematu)",
     date: new Date(message.envelope?.date ?? message.internalDate ?? Date.now()).toISOString(),
@@ -121,53 +124,100 @@ function summaryFromFetch(message: FetchMessageObject, folder: string, uidValidi
 
 export async function getMessages(
   config: MailboxConfig,
-  input: { folder: string; page: number; limit: number; query: string; unseen?: boolean },
+  input: {
+    folder: string
+    page: number
+    limit: number
+    query: string
+    unseen?: boolean
+    scope?: SearchScope
+    searchIn?: SearchIn
+  },
 ): Promise<MessagesResponse> {
   return withImap(config, async (client) => {
-    const lock = await client.getMailboxLock(input.folder, { readOnly: true, description: "mailinlay:list" }).catch(() => {
-      throw errors.folderNotFound()
-    })
-    try {
-      if (!client.mailbox) throw errors.folderNotFound()
-      const mailbox = client.mailbox
-      let total = mailbox.exists
-      let hasMore = false
-      let fetched: FetchMessageObject[] = []
-      const query = input.query.trim()
+    const query = input.query.trim()
+    const scope = input.scope ?? "folder"
+    const searchIn = input.searchIn ?? "headers"
+    const fetchQuery = {
+      uid: true,
+      envelope: true,
+      flags: true,
+      bodyStructure: true,
+      internalDate: true,
+    }
 
-      if (query || input.unseen) {
-        const criteria: Parameters<typeof client.search>[0] = {}
-        if (input.unseen) criteria.seen = false
-        if (query) criteria.or = [{ from: query }, { to: query }, { cc: query }, { subject: query }]
-        const found = await client.search(criteria, { uid: true })
-        const uids = (found || []).sort((a, b) => b - a)
-        total = uids.length
-        const start = (input.page - 1) * input.limit
-        const pageUids = uids.slice(start, start + input.limit)
-        hasMore = start + pageUids.length < total
-        if (pageUids.length) {
-          fetched = await client.fetchAll(pageUids, {
-            uid: true, envelope: true, flags: true, bodyStructure: true, internalDate: true,
-          }, { uid: true })
+    const searchFolder = async (folder: string, candidateLimit?: number) => {
+      const lock = await client.getMailboxLock(folder, { readOnly: true, description: "mailinlay:list" }).catch(() => {
+        throw errors.folderNotFound()
+      })
+      try {
+        if (!client.mailbox) throw errors.folderNotFound()
+        const mailbox = client.mailbox
+        let total = mailbox.exists
+        let fetched: FetchMessageObject[] = []
+
+        if (query || input.unseen) {
+          const criteria: Parameters<typeof client.search>[0] = {}
+          if (input.unseen) criteria.seen = false
+          if (query) {
+            criteria.or = [
+              { from: query },
+              { to: query },
+              { cc: query },
+              { subject: query },
+              ...(searchIn === "all" ? [{ body: query }] : []),
+            ]
+          }
+          const found = await client.search(criteria, { uid: true })
+          const uids = (found || []).sort((a, b) => b - a)
+          total = uids.length
+          const selectedUids = candidateLimit === undefined
+            ? uids.slice((input.page - 1) * input.limit, input.page * input.limit)
+            : uids.slice(0, candidateLimit)
+          if (selectedUids.length) fetched = await client.fetchAll(selectedUids, fetchQuery, { uid: true })
+        } else if (total > 0) {
+          const end = total - (input.page - 1) * input.limit
+          if (end > 0) {
+            const start = Math.max(1, end - input.limit + 1)
+            fetched = await client.fetchAll(`${start}:${end}`, fetchQuery)
+          }
         }
-      } else if (total > 0) {
-        const end = total - (input.page - 1) * input.limit
-        if (end > 0) {
-          const start = Math.max(1, end - input.limit + 1)
-          fetched = await client.fetchAll(`${start}:${end}`, {
-            uid: true, envelope: true, flags: true, bodyStructure: true, internalDate: true,
-          })
-          hasMore = start > 1
+
+        return {
+          total,
+          items: fetched
+            .sort((a, b) => b.uid - a.uid)
+            .map((message) => summaryFromFetch(message, folder, mailbox.uidValidity)),
         }
+      } finally {
+        lock.release()
       }
+    }
 
-      const items = fetched
-        .sort((a, b) => b.uid - a.uid)
-        .map((message) => summaryFromFetch(message, input.folder, mailbox.uidValidity))
+    if (scope === "all" && query) {
+      const folders = mapFolders(await listedFolders(client, config), config)
+      const candidateLimit = input.page * input.limit
+      const folderResults = []
+      for (const folder of folders) {
+        folderResults.push(await searchFolder(folder.path, candidateLimit))
+      }
+      const total = folderResults.reduce((sum, result) => sum + result.total, 0)
+      const start = (input.page - 1) * input.limit
+      const items = folderResults
+        .flatMap((result) => result.items)
+        .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
+        .slice(start, start + input.limit)
+      return { items, page: input.page, limit: input.limit, hasMore: start + items.length < total, total }
+    }
 
-      return { items, page: input.page, limit: input.limit, hasMore, total }
-    } finally {
-      lock.release()
+    const result = await searchFolder(input.folder)
+    const start = (input.page - 1) * input.limit
+    return {
+      items: result.items,
+      page: input.page,
+      limit: input.limit,
+      hasMore: start + result.items.length < result.total,
+      total: result.total,
     }
   })
 }

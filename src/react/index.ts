@@ -9,5 +9,7 @@ export type {
   MessageAttachment,
   MessageDetail,
   MessageSummary,
+  SearchIn,
+  SearchScope,
   SendResponse,
 } from "../shared/types"
