@@ -109,7 +109,7 @@ def light_checks(root, sha, base=None, standard_only=False):
     if policy.get("local_light_commands") and not standard_only:
         # Exact immutable source, no .env from the operator checkout and no archive
         # left on disk. Installed dependencies disappear with the temporary context.
-        with tempfile.TemporaryDirectory(prefix="prm-ci-light-") as folder:
+        with tempfile.TemporaryDirectory(prefix="prm-ci-light-") as folder, tempfile.TemporaryDirectory(prefix="prm-ci-cache-") as cache_folder:
             producer = subprocess.Popen(["git", "-C", str(root), "archive", sha], stdout=subprocess.PIPE)
             try:
                 subprocess.run(["tar", "-xf", "-", "-C", folder], stdin=producer.stdout, check=True)
@@ -117,7 +117,10 @@ def light_checks(root, sha, base=None, standard_only=False):
                 producer.stdout.close()
                 if producer.wait() != 0:
                     raise ValueError("git archive failed")
-            env = {**os.environ, "GITHUB_SHA": sha, "CI": "1"}
+            cache = pathlib.Path(cache_folder)
+            env = {**os.environ, "GITHUB_SHA": sha, "CI": "1", "NEXT_TELEMETRY_DISABLED": "1",
+                   "npm_config_cache": str(cache / "npm"), "npm_config_store_dir": str(cache / "pnpm"),
+                   "XDG_CACHE_HOME": str(cache / "xdg"), "COREPACK_HOME": str(cache / "corepack")}
             for command in policy["local_light_commands"]:
                 subprocess.run(["bash", "-e", "-o", "pipefail", "-c", command], cwd=folder, env=env, check=True, timeout=480)
     return checked

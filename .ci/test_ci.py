@@ -4,6 +4,8 @@ import pathlib
 import json
 import subprocess
 import tempfile
+import os
+from unittest.mock import patch
 import unittest
 
 path = pathlib.Path(__file__).with_name("ci.py")
@@ -57,6 +59,26 @@ class RoutingTests(unittest.TestCase):
             (root / "module.py").write_text(dirty)
             self.assertIn("module.py", ci.light_checks(root, sha))
             self.assertEqual((root / "module.py").read_text(), dirty)
+
+    def test_fallback_removes_its_installer_cache(self):
+        with tempfile.TemporaryDirectory(prefix="prm-ci-cache-fixture-") as folder:
+            root = pathlib.Path(folder)
+            def git(*args):
+                return subprocess.check_output(["git", "-C", folder, *args], stderr=subprocess.DEVNULL).decode().strip()
+            git("init", "-q")
+            (root / ".ci").mkdir()
+            command = "python3 -c 'import os,pathlib; p=pathlib.Path(os.environ[\"npm_config_cache\"]); assert not p.is_relative_to(pathlib.Path.cwd()); p.mkdir(parents=True); (p/\"fixture\").write_text(\"cache\"); pathlib.Path(os.environ[\"PRM_CI_CACHE_PROBE\"]).write_text(str(p))'"
+            (root / ".ci/policy.json").write_text(json.dumps({"heavy_executor": "local", "light_executor": "github-with-local-fallback", "local_workflows": [], "local_light_commands": [command]}))
+            (root / ".ci/ci.py").write_text("# fixture\n")
+            (root / ".ci/test_ci.py").write_text("# fixture\n")
+            git("add", ".")
+            sha = git("-c", "user.name=CI fixture", "-c", "user.email=ci@example.invalid", "commit-tree", git("write-tree"), "-m", "fixture")
+            probe = root / "cache-path.txt"
+            with patch.dict(os.environ, {"PRM_CI_CACHE_PROBE": str(probe), "npm_config_cache": str(root / "protected-cache")}):
+                ci.light_checks(root, sha)
+            used_cache = pathlib.Path(probe.read_text())
+            self.assertFalse(used_cache.exists())
+            self.assertFalse((root / "protected-cache").exists())
 
 
 if __name__ == "__main__":
