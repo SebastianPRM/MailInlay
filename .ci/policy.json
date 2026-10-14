@@ -16,6 +16,7 @@
     "npm pack --dry-run"
   ],
   "heavy_gates": "All existing project checks and final-image tests remain mandatory for the exact SHA. See local-workflows and AGENTS.md. A light receipt never approves deployment.",
-  "cleanup": "Immediately after server verification and independent rollback; preserve source, data, volumes and signed deliverables.",
-  "automation": "Hosted light workflows run on push/PR. The active agent invokes ci.py auto; no always-on Mac runner."
+  "cleanup": "On the current operator computer, immediately after server verification and independent rollback; preserve source, data, volumes and signed deliverables.",
+  "automation": "Hosted light workflows run on push/PR. The active agent invokes ci.py auto; no always-on Mac runner.",
+  "local_executor_owner": "current person or agent performing the change/deployment; never depends on the owner Mac"
 }
