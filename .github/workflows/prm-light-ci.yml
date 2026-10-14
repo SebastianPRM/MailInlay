@@ -1,0 +1,25 @@
+name: Lightweight CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: prm-light-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  light:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check immutable source and CI fallback regression
+        run: python3 -B .ci/ci.py light --standard-only --sha "$GITHUB_SHA" --receipt "$RUNNER_TEMP/prm-light.json"

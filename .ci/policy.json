@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "light_executor": "github-with-local-fallback",
+  "heavy_executor": "local",
+  "light_workflows": [
+    "prm-light-ci.yml",
+    "ci.yml"
+  ],
+  "local_workflows": [],
+  "local_light_commands": [
+    "npm ci",
+    "npm test",
+    "npm run lint",
+    "npm run build",
+    "npm audit --omit=dev --audit-level=high",
+    "npm pack --dry-run"
+  ],
+  "heavy_gates": "All existing project checks and final-image tests remain mandatory for the exact SHA. See local-workflows and AGENTS.md. A light receipt never approves deployment.",
+  "cleanup": "Immediately after server verification and independent rollback; preserve source, data, volumes and signed deliverables.",
+  "automation": "Hosted light workflows run on push/PR. The active agent invokes ci.py auto; no always-on Mac runner."
+}
